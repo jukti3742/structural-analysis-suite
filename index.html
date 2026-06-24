@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Structural Analysis Suite - Section Properties</title>
+  <meta name="description" content="Calculate and visualize geometric, elastic, and plastic section properties of doubly and singly symmetric I-sections in real-time. Export reports and copy results.">
+  <link rel="stylesheet" href="css/style.css?v=5.0">
+</head>
+<body>
+  <!-- Floating Theme Toggle (Top Right) -->
+  <button id="theme-toggle" class="floating-theme-toggle" aria-label="Toggle Dark/Light Mode">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" id="theme-icon"><path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-linecap="round"/></svg>
+    <span id="theme-text">Dark Mode</span>
+  </button>
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="logo-container">
+        <div class="logo-icon">A</div>
+        <div class="logo-text">
+          <h1>Apex Suite</h1>
+          <span>Structural Analysis</span>
+          <div class="sidebar-version">V1.0.0 Stable</div>
+        </div>
+      </div>
+      
+      <nav class="nav-menu">
+        <div class="nav-section-title">Section Properties</div>
+        <a class="nav-item active" id="nav-isection" data-section="I-Section">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 18h16M12 6v12" stroke-linecap="round"/></svg>
+          I-Section
+        </a>
+        <a class="nav-item disabled" data-section="Channel-Section">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18V6h12v4" stroke-linecap="round"/></svg>
+          Channel Section
+          <span class="lock-icon">Soon</span>
+        </a>
+        <a class="nav-item disabled" data-section="Box-Section">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" stroke-linecap="round"/></svg>
+          Box Section
+          <span class="lock-icon">Soon</span>
+        </a>
+        <a class="nav-item disabled" data-section="Circular-Section">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" stroke-linecap="round"/></svg>
+          Circular Tube
+          <span class="lock-icon">Soon</span>
+        </a>
+        <a class="nav-item disabled" data-section="Angle-Section">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 6v12h12" stroke-linecap="round"/></svg>
+          Angle Section
+          <span class="lock-icon">Soon</span>
+        </a>
+
+        <div class="nav-section-title">Beam & Frame Analysis</div>
+        <a class="nav-item" id="nav-single-beam" data-section="Single-Beam">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M3 9v6M21 9v6" stroke-linecap="round"/></svg>
+          Single Span Beam
+        </a>
+      </nav>
+
+
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- Header -->
+      <header class="header-bar">
+        <div class="header-title">
+          <h2 class="print-hidden">I-Section Property Calculator</h2>
+          <h2 class="print-only-title">Property Calculator</h2>
+          <p class="print-hidden">Compute geometric, elastic, and plastic section properties for doubly and singly symmetric profiles.</p>
+          <div class="print-section-type" id="print-section-type">
+            <span class="type-label">Section Type:</span>
+            <span class="type-value">I section</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Section Properties View Container -->
+      <div id="section-properties-view">
+        <!-- Dashboard Workspace Grid -->
+        <div class="workspace-grid">
+        
+        <!-- Left Side: Inputs & Presets -->
+        <section class="left-column">
+          
+          <!-- Section Presets Card -->
+          <div class="card" id="card-presets">
+            <h3 class="card-title">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-linecap="round"/></svg>
+              Standard Section Catalog
+            </h3>
+            <div class="form-group">
+              <label for="catalog-standard-select">Standard / Manufacturer</label>
+              <select id="catalog-standard-select" class="select-input">
+                <option value="custom">-- Custom / Select Standard --</option>
+              </select>
+              <span class="print-value-val" id="print-standard-val">Custom</span>
+            </div>
+            <div class="form-group" style="margin-top: 12px;">
+              <label for="catalog-profile-select">Section Profile</label>
+              <select id="catalog-profile-select" class="select-input">
+                <option value="custom">-- Custom Dimensions --</option>
+              </select>
+              <span class="print-value-val" id="print-preset-val">Custom</span>
+            </div>
+            
+            <div class="form-group print-hidden" style="margin-top: 15px; display: flex; gap: 15px;">
+              <div style="flex-grow: 1;">
+                <label for="input-unit">Input Units</label>
+                <select id="input-unit" class="select-input">
+                  <option value="mm">Millimeters (mm)</option>
+                  <option value="cm">Centimeters (cm)</option>
+                  <option value="in">Inches (in)</option>
+                  <option value="m">Meters (m)</option>
+                </select>
+              </div>
+              <div style="flex-grow: 1;">
+                <label for="output-unit">Output Units</label>
+                <select id="output-unit" class="select-input">
+                  <option value="mm">Millimeters (mm)</option>
+                  <option value="cm" selected>Centimeters (cm)</option>
+                  <option value="in">Inches (in)</option>
+                  <option value="m">Meters (m)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Options Card -->
+          <div class="card print-hidden" style="padding: 16px 20px; margin-bottom: 24px;">
+            <div class="switch-group" style="margin-bottom: 12px; border: none; padding: 0; background: none;">
+              <div>
+                <label style="font-weight:600; color: var(--text-primary);">Symmetric Flanges</label>
+                <span class="switch-label-desc">Lock top & bottom flanges to equal size</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="sync-flanges-toggle">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="switch-group" style="margin-bottom: 12px; border: none; padding: 12px 0 0 0; border-top: 1px solid var(--border-color); background: none; border-radius: 0;">
+              <div>
+                <label style="font-weight:600; color: var(--text-primary);">Top Reinforcement Plate</label>
+                <span class="switch-label-desc">Add a cover plate to the top flange</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="top-plate-toggle">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="switch-group" style="margin-bottom: 0; border: none; padding: 12px 0 0 0; border-top: 1px solid var(--border-color); background: none; border-radius: 0;">
+              <div>
+                <label style="font-weight:600; color: var(--text-primary);">Bottom Reinforcement Plate</label>
+                <span class="switch-label-desc">Add a cover plate to the bottom flange</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="bottom-plate-toggle">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Dimensions Input Card -->
+          <div class="card" id="card-dimensions">
+            <h3 class="card-title">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z" stroke-linecap="round"/><path d="M9 12h6" stroke-linecap="round"/></svg>
+              Dimensions<span class="print-hidden"> Input</span>
+            </h3>
+            
+            <!-- Overall Depth (D) -->
+            <div class="form-group" data-input-group="depth">
+              <div class="form-label-row">
+                <label for="param-D">Overall Depth <span class="label-symbol">D</span></label>
+                <div class="input-number-container">
+                  <input type="number" id="param-D" min="10" max="2000" step="1" value="250">
+                  <span class="input-unit-label unit-lbl-length">mm</span>
+                </div>
+              </div>
+              <div class="slider-container">
+                <input type="range" id="slider-D" min="10" max="1000" step="1" value="250">
+              </div>
+            </div>
+
+            <!-- Top Flange Width (btf) -->
+            <div class="form-group" data-input-group="top-flange">
+              <div class="form-label-row">
+                <label for="param-btf">Top Flange Width <span class="label-symbol">b<sub>tf</sub></span></label>
+                <div class="input-number-container">
+                  <input type="number" id="param-btf" min="5" max="1000" step="1" value="150">
+                  <span class="input-unit-label unit-lbl-length">mm</span>
+                </div>
+              </div>
+              <div class="slider-container">
+                <input type="range" id="slider-btf" min="5" max="600" step="1" value="150">
+              </div>
+            </div>
+
+            <!-- Top Flange Thickness (ttf) -->
+            <div class="form-group" data-input-group="top-flange">
+              <div class="form-label-row">
+                <label for="param-ttf">Top Flange Thickness <span class="label-symbol">t<sub>tf</sub></span></label>
+                <div class="input-number-container">
+                  <input type="number" id="param-ttf" min="1" max="100" step="0.5" value="12">
+                  <span class="input-unit-label unit-lbl-length">mm</span>
+                </div>
+              </div>
+              <div class="slider-container">
+                <input type="range" id="slider-ttf" min="1" max="100" step="0.5" value="12">
+              </div>
+            </div>
+
+            <!-- Bottom Flange Width (bbf) -->
+            <div class="form-group" data-input-group="bottom-flange" id="group-bbf">
+              <div class="form-label-row">
+                <label for="param-bbf">Bottom Flange Width <span class="label-symbol">b<sub>bf</sub></span></label>
+                <div class="input-number-container">
+                  <input type="number" id="param-bbf" min="5" max="1000" step="1" value="150">
+                  <span class="input-unit-label unit-lbl-length">mm</span>
+                </div>
+              </div>
+              <div class="slider-container">
+                <input type="range" id="slider-bbf" min="5" max="600" step="1" value="150">
+              </div>
+            </div>
+
+            <!-- Bottom Flange Thickness (tbf) -->
+            <div class="form-group" data-input-group="bottom-flange" id="group-tbf">
+              <div class="form-label-row">
+                <label for="param-tbf">Bottom Flange Thickness <span class="label-symbol">t<sub>bf</sub></span></label>
+                <div class="input-number-container">
+                  <input type="number" id="param-tbf" min="1" max="100" step="0.5" value="12">
+                  <span class="input-unit-label unit-lbl-length">mm</span>
+                </div>
+              </div>
+              <div class="slider-container">
+                <input type="range" id="slider-tbf" min="1" max="100" step="0.5" value="12">
+              </div>
+            </div>
+
+            <!-- Web Thickness (tw) -->
+            <div class="form-group" data-input-group="web">
+              <div class="form-label-row">
+                <label for="param-tw">Web Thickness <span class="label-symbol">t<sub>w</sub></span></label>
+                <div class="input-number-container">
+                  <input type="number" id="param-tw" min="1" max="100" step="0.1" value="8">
+                  <span class="input-unit-label unit-lbl-length">mm</span>
+                </div>
+              </div>
+              <div class="slider-container">
+                <input type="range" id="slider-tw" min="1" max="50" step="0.5" value="8">
+              </div>
+            </div>
+
+            <!-- Top Reinforcement Plate (btp, ttp) -->
+            <div id="group-top-plate" style="display: none; border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 15px;">
+              <h4 style="font-size:12px; color:var(--accent-secondary); margin-bottom:12px; text-transform:uppercase;">Top Cover Plate</h4>
+              <div class="form-group" data-input-group="top-plate">
+                <div class="form-label-row">
+                  <label for="param-btp">Plate Width <span class="label-symbol">b<sub>tp</sub></span></label>
+                  <div class="input-number-container">
+                    <input type="number" id="param-btp" min="5" max="1000" step="1" value="160">
+                    <span class="input-unit-label unit-lbl-length">mm</span>
+                  </div>
+                </div>
+                <div class="slider-container">
+                  <input type="range" id="slider-btp" min="5" max="600" step="1" value="160">
+                </div>
+              </div>
+              <div class="form-group" data-input-group="top-plate">
+                <div class="form-label-row">
+                  <label for="param-ttp">Plate Thickness <span class="label-symbol">t<sub>tp</sub></span></label>
+                  <div class="input-number-container">
+                    <input type="number" id="param-ttp" min="1" max="100" step="1" value="10">
+                    <span class="input-unit-label unit-lbl-length">mm</span>
+                  </div>
+                </div>
+                <div class="slider-container">
+                  <input type="range" id="slider-ttp" min="1" max="100" step="1" value="10">
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom Reinforcement Plate (bbp, tbp) -->
+            <div id="group-bottom-plate" style="display: none; border-top: 1px dashed var(--border-color); padding-top: 15px; margin-top: 15px;">
+              <h4 style="font-size:12px; color:var(--accent-secondary); margin-bottom:12px; text-transform:uppercase;">Bottom Cover Plate</h4>
+              <div class="form-group" data-input-group="bottom-plate">
+                <div class="form-label-row">
+                  <label for="param-bbp">Plate Width <span class="label-symbol">b<sub>bp</sub></span></label>
+                  <div class="input-number-container">
+                    <input type="number" id="param-bbp" min="5" max="1000" step="1" value="160">
+                    <span class="input-unit-label unit-lbl-length">mm</span>
+                  </div>
+                </div>
+                <div class="slider-container">
+                  <input type="range" id="slider-bbp" min="5" max="600" step="1" value="160">
+                </div>
+              </div>
+              <div class="form-group" data-input-group="bottom-plate">
+                <div class="form-label-row">
+                  <label for="param-tbp">Plate Thickness <span class="label-symbol">t<sub>bp</sub></span></label>
+                  <div class="input-number-container">
+                    <input type="number" id="param-tbp" min="1" max="100" step="1" value="10">
+                    <span class="input-unit-label unit-lbl-length">mm</span>
+                  </div>
+                </div>
+                <div class="slider-container">
+                  <input type="range" id="slider-tbp" min="1" max="100" step="1" value="10">
+                </div>
+              </div>
+            </div>
+
+            <!-- Validation Error Alert -->
+            <div id="validation-error" style="color: var(--error); font-size:12px; font-weight:500; display:none; padding:10px; background:rgba(239,68,68,0.1); border-radius:6px; border:1px solid rgba(239,68,68,0.2); margin-top:10px;">
+              Error message here.
+            </div>
+          </div>
+        </section>
+
+        <!-- Right Side: Visualization & Results -->
+        <section class="right-column">
+          <!-- Visualization SVG Card -->
+          <div class="card" id="card-visualizer">
+            <h3 class="card-title">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round"/></svg>
+              Cross-Section Visualizer
+            </h3>
+            <div class="visualization-box">
+              <div id="visualization-container" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;"></div>
+              <div class="visualizer-overlay" id="visualizer-summary-overlay"></div>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-primary" id="btn-print">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" stroke-linecap="round"/></svg>
+                Export PDF Report
+              </button>
+              <button class="btn btn-secondary" id="btn-excel" style="gap: 6px;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V18a2 2 0 01-2 2z" stroke-linecap="round"/></svg>
+                Export Excel
+              </button>
+              <button class="btn btn-secondary" id="btn-copy">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m-6 4h6m-3-3v6" stroke-linecap="round"/></svg>
+                Copy Results
+              </button>
+            </div>
+          </div>
+
+          <!-- Section Results Card -->
+          <div class="card" id="card-results">
+            <h3 class="card-title">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2" stroke-linecap="round"/></svg>
+              Calculated Section Properties
+            </h3>
+            
+            <div class="results-grid">
+              <!-- Column 1: Area, Perimeter, Centroids & Inertia -->
+              <div class="results-table-container">
+                <table class="results-table">
+                  <tr>
+                    <td class="property-name">Cross-Sectional Area</td>
+                    <td class="property-symbol">A</td>
+                    <td class="property-value" id="res-A">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="A" data-type="area" aria-label="Area units for A">
+                        <option value="mm">mm²</option>
+                        <option value="cm" selected>cm²</option>
+                        <option value="in">in²</option>
+                        <option value="m">m²</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-A">cm²</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Perimeter</td>
+                    <td class="property-symbol">P</td>
+                    <td class="property-value" id="res-P">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="P" data-type="length" aria-label="Length units for P">
+                        <option value="mm">mm</option>
+                        <option value="cm" selected>cm</option>
+                        <option value="in">in</option>
+                        <option value="m">m</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-P">cm</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Centroid from Bottom Fiber</td>
+                    <td class="property-symbol">y<sub>c</sub></td>
+                    <td class="property-value" id="res-yc">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="yc" data-type="length" aria-label="Length units for yc">
+                        <option value="mm">mm</option>
+                        <option value="cm" selected>cm</option>
+                        <option value="in">in</option>
+                        <option value="m">m</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-yc">cm</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Centroid from Top Fiber</td>
+                    <td class="property-symbol">y<sub>t</sub></td>
+                    <td class="property-value" id="res-yt">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="yt" data-type="length" aria-label="Length units for yt">
+                        <option value="mm">mm</option>
+                        <option value="cm" selected>cm</option>
+                        <option value="in">in</option>
+                        <option value="m">m</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-yt">cm</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Moment of Inertia about Major Axis</td>
+                    <td class="property-symbol">I<sub>xx</sub></td>
+                    <td class="property-value" id="res-Ixx">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="Ixx" data-type="inertia" aria-label="Inertia units for Ixx">
+                        <option value="mm">mm⁴</option>
+                        <option value="cm" selected>cm⁴</option>
+                        <option value="in">in⁴</option>
+                        <option value="m">m⁴</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-Ixx">cm⁴</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Moment of Inertia about Minor Axis</td>
+                    <td class="property-symbol">I<sub>yy</sub></td>
+                    <td class="property-value" id="res-Iyy">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="Iyy" data-type="inertia" aria-label="Inertia units for Iyy">
+                        <option value="mm">mm⁴</option>
+                        <option value="cm" selected>cm⁴</option>
+                        <option value="in">in⁴</option>
+                        <option value="m">m⁴</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-Iyy">cm⁴</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Radius of Gyration about Major Axis</td>
+                    <td class="property-symbol">r<sub>xx</sub></td>
+                    <td class="property-value" id="res-rxx">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="rxx" data-type="length" aria-label="Length units for rxx">
+                        <option value="mm">mm</option>
+                        <option value="cm" selected>cm</option>
+                        <option value="in">in</option>
+                        <option value="m">m</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-rxx">cm</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Radius of Gyration about Minor Axis</td>
+                    <td class="property-symbol">r<sub>yy</sub></td>
+                    <td class="property-value" id="res-ryy">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="ryy" data-type="length" aria-label="Length units for ryy">
+                        <option value="mm">mm</option>
+                        <option value="cm" selected>cm</option>
+                        <option value="in">in</option>
+                        <option value="m">m</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-ryy">cm</span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Column 2: Moduli, Plastic & Torsional -->
+              <div class="results-table-container">
+                <table class="results-table">
+                  <tr>
+                    <td class="property-name">Elastic Section Modulus at Top Fiber</td>
+                    <td class="property-symbol">S<sub>xt</sub></td>
+                    <td class="property-value" id="res-Sxt">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="Sxt" data-type="modulus" aria-label="Modulus units for Sxt">
+                        <option value="mm">mm³</option>
+                        <option value="cm" selected>cm³</option>
+                        <option value="in">in³</option>
+                        <option value="m">m³</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-Sxt">cm³</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Elastic Section Modulus at Bottom Fiber</td>
+                    <td class="property-symbol">S<sub>xb</sub></td>
+                    <td class="property-value" id="res-Sxb">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="Sxb" data-type="modulus" aria-label="Modulus units for Sxb">
+                        <option value="mm">mm³</option>
+                        <option value="cm" selected>cm³</option>
+                        <option value="in">in³</option>
+                        <option value="m">m³</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-Sxb">cm³</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Elastic Section Modulus about Minor Axis</td>
+                    <td class="property-symbol">S<sub>y</sub></td>
+                    <td class="property-value" id="res-Sy">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="Sy" data-type="modulus" aria-label="Modulus units for Sy">
+                        <option value="mm">mm³</option>
+                        <option value="cm" selected>cm³</option>
+                        <option value="in">in³</option>
+                        <option value="m">m³</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-Sy">cm³</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Plastic Section Modulus about Major Axis</td>
+                    <td class="property-symbol">Z<sub>xx</sub></td>
+                    <td class="property-value" id="res-Zxx">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="Zxx" data-type="modulus" aria-label="Modulus units for Zxx">
+                        <option value="mm">mm³</option>
+                        <option value="cm" selected>cm³</option>
+                        <option value="in">in³</option>
+                        <option value="m">m³</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-Zxx">cm³</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Plastic Section Modulus about Minor Axis</td>
+                    <td class="property-symbol">Z<sub>yy</sub></td>
+                    <td class="property-value" id="res-Zyy">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="Zyy" data-type="modulus" aria-label="Modulus units for Zyy">
+                        <option value="mm">mm³</option>
+                        <option value="cm" selected>cm³</option>
+                        <option value="in">in³</option>
+                        <option value="m">m³</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-Zyy">cm³</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Torsional Constant</td>
+                    <td class="property-symbol">J</td>
+                    <td class="property-value" id="res-J">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="J" data-type="inertia" aria-label="Inertia units for J">
+                        <option value="mm">mm⁴</option>
+                        <option value="cm" selected>cm⁴</option>
+                        <option value="in">in⁴</option>
+                        <option value="m">m⁴</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-J">cm⁴</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="property-name">Warping Constant</td>
+                    <td class="property-symbol">C<sub>w</sub></td>
+                    <td class="property-value" id="res-Cw">-</td>
+                    <td class="property-unit">
+                      <select class="row-unit-select" data-property="Cw" data-type="warping" aria-label="Warping units for Cw">
+                        <option value="mm">mm⁶</option>
+                        <option value="cm" selected>cm⁶</option>
+                        <option value="in">in⁶</option>
+                        <option value="m">m⁶</option>
+                      </select>
+                      <span class="print-unit-val" id="print-unit-Cw">cm⁶</span>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+
+
+        </section>
+      </div>
+      </div>
+      
+      <!-- Beam Analysis View Container -->
+      <div id="beam-analysis-view" style="display: none;">
+        <div class="workspace-grid">
+          
+          <!-- Left Column: Inputs & Tables -->
+          <section class="left-column">
+            
+            <!-- Beam Specifications Card -->
+            <div class="card">
+              <h3 class="card-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round"/></svg>
+                Beam Specifications
+              </h3>
+              <div class="beam-specs-box" style="padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(0, 0, 0, 0.02); display: flex; gap: 15px;">
+                <div style="flex: 1; min-width: 0;">
+                  <label for="beam-length" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Total Length (L)</label>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <input type="number" id="beam-length" min="1" max="100000" step="0.5" value="6" class="form-control" style="font-size: 13px; padding: 6px 10px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); flex: 1; min-width: 0; text-align: right;">
+                    <select id="unit-beam-length" class="form-control" style="font-size: 12px; padding: 4px 8px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 65px; cursor: pointer; min-width: 65px;">
+                      <option value="m" selected>m</option>
+                      <option value="cm">cm</option>
+                      <option value="mm">mm</option>
+                      <option value="in">in</option>
+                      <option value="ft">ft</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <label for="beam-E" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Elastic Modulus (E)</label>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <input type="number" id="beam-E" min="1" max="50000000" step="10" value="200" class="form-control" style="font-size: 13px; padding: 6px 10px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); flex: 1; min-width: 0; text-align: right;">
+                    <select id="unit-beam-E" class="form-control" style="font-size: 12px; padding: 4px 6px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 70px; cursor: pointer; min-width: 70px;">
+                      <option value="GPa" selected>GPa</option>
+                      <option value="MPa">MPa</option>
+                      <option value="psi">psi</option>
+                      <option value="ksi">ksi</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Supports Card -->
+            <div class="card">
+              <h3 class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round"/></svg>
+                  Supports
+                </span>
+                <button class="btn btn-secondary btn-sm" id="btn-add-support" style="padding: 4px 8px; font-size: 11px; gap: 4px;">+ Add Support</button>
+              </h3>
+              <div class="table-responsive">
+                <table class="beam-inputs-table" id="table-supports">
+                  <thead>
+                    <tr class="title-row">
+                      <th style="width: 100px; min-width: 100px; text-align: center;">Support</th>
+                      <th style="width: 140px; min-width: 140px; text-align: center;">Location x</th>
+                      <th style="width: 140px; min-width: 140px;">Type</th>
+                      <th style="width: 180px; min-width: 180px; text-align: center;">Stiffness K<sub>y</sub></th>
+                      <th style="width: 45px; min-width: 45px; text-align: center;">Action</th>
+                    </tr>
+                    <tr class="unit-row">
+                      <th></th>
+                      <th style="text-align: center;">m</th>
+                      <th></th>
+                      <th style="text-align: center;">kN/m</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Rows dynamically generated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Loads Card -->
+            <div class="card">
+              <h3 class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 13l-7 7-7-7m14-6l-7 7-7-7" stroke-linecap="round"/></svg>
+                  Loads
+                </span>
+                <button class="btn btn-secondary btn-sm" id="btn-add-load" style="padding: 4px 8px; font-size: 11px; gap: 4px;">+ Add Load</button>
+              </h3>
+              <!-- Unit Settings Section -->
+              <div class="unit-settings-card" style="margin-bottom: 16px; padding: 12px; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(0, 0, 0, 0.02); display: flex; gap: 12px;">
+                <!-- Column 1: Load Units (Stacked Vertically) -->
+                <div style="flex: 1.8; display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+                  <div>
+                    <label for="unit-point-load" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Point Load</label>
+                    <select id="unit-point-load" class="form-control" style="font-size: 12px; padding: 4px 8px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 100%;">
+                      <option value="kN" selected>kN</option>
+                      <option value="N">N</option>
+                      <option value="kg">kg</option>
+                      <option value="MTon">MTon</option>
+                      <option value="lbf">lbf</option>
+                      <option value="kip">kip</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Moment</label>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <select id="unit-moment-force" class="form-control" style="font-size: 12px; padding: 4px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); flex: 1; min-width: 0;">
+                        <option value="kN" selected>kN</option>
+                        <option value="N">N</option>
+                        <option value="kg">kg</option>
+                        <option value="MTon">MTon</option>
+                        <option value="lbf">lbf</option>
+                        <option value="kip">kip</option>
+                      </select>
+                      <span style="font-size: 12px; font-weight: bold; color: var(--text-secondary); margin: 0 2px;">×</span>
+                      <select id="unit-moment-dist" class="form-control" style="font-size: 12px; padding: 4px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); flex: 1; min-width: 0;">
+                        <option value="m" selected>m</option>
+                        <option value="cm">cm</option>
+                        <option value="mm">mm</option>
+                        <option value="in">in</option>
+                        <option value="ft">ft</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">UDL/Trapezoidal</label>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                      <select id="unit-udl-force" class="form-control" style="font-size: 12px; padding: 4px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); flex: 1; min-width: 0;">
+                        <option value="kN" selected>kN</option>
+                        <option value="N">N</option>
+                        <option value="kg">kg</option>
+                        <option value="MTon">MTon</option>
+                        <option value="lbf">lbf</option>
+                        <option value="kip">kip</option>
+                      </select>
+                      <span style="font-size: 12px; font-weight: bold; color: var(--text-secondary); margin: 0 2px;">/</span>
+                      <select id="unit-udl-dist" class="form-control" style="font-size: 12px; padding: 4px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); flex: 1; min-width: 0;">
+                        <option value="m" selected>m</option>
+                        <option value="cm">cm</option>
+                        <option value="mm">mm</option>
+                        <option value="in">in</option>
+                        <option value="ft">ft</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Column 2: Distance Unit -->
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+                  <div>
+                    <label for="unit-distance" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Distance Unit</label>
+                    <select id="unit-distance" class="form-control" style="font-size: 12px; padding: 4px 8px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 100%;">
+                      <option value="m" selected>m</option>
+                      <option value="cm">cm</option>
+                      <option value="mm">mm</option>
+                      <option value="in">in</option>
+                      <option value="ft">ft</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Column 3: Angle Unit -->
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+                  <div>
+                    <label for="unit-angle" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Angle Unit</label>
+                    <select id="unit-angle" class="form-control" style="font-size: 12px; padding: 4px 8px; height: 32px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 100%;">
+                      <option value="°" selected>°</option>
+                      <option value="rad">rad</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="table-responsive" id="table-loads-container">
+                <table class="beam-inputs-table" id="table-loads">
+                  <tbody>
+                    <!-- Rows dynamically generated in transposed format -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+              <button class="btn btn-primary" id="btn-solve-beam" style="width: 100%; justify-content: center; height: 44px; font-weight: 600;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" stroke-linecap="round"/></svg>
+                Solve Beam Analysis
+              </button>
+            </div>
+
+          </section>
+
+          <!-- Right Column: Visualizer & Diagrams -->
+          <section class="right-column">
+            
+            <!-- Interactive Schematic Visualizer Card -->
+            <div class="card" style="padding: 16px 20px;">
+              <h3 class="card-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round"/></svg>
+                Interactive Beam Schematic
+              </h3>
+              <div class="visualization-box" style="height: 350px; min-height: 350px; margin-bottom: 0; position: relative;">
+                <div id="beam-schematic-container" style="width: 100%; height: 100%; touch-action: none;"></div>
+                <!-- Drag tooltip indicator -->
+                <div id="beam-drag-tooltip" style="position: absolute; display: none; background: var(--bg-card); border: 1px solid var(--accent-secondary); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; z-index: 10; box-shadow: var(--shadow-sm); transition: opacity 0.15s;"></div>
+                <!-- Hover tooltip indicator -->
+                <div id="beam-hover-tooltip" style="position: absolute; display: none; background: var(--bg-card); border: 1px solid var(--accent-secondary); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; z-index: 10; box-shadow: var(--shadow-sm); font-weight: 600;"></div>
+              </div>
+            </div>
+
+            <!-- Parent Wrapper for All Diagrams -->
+            <div id="beam-diagram-container" style="display: flex; flex-direction: column;">
+              
+              <!-- Card 1: Reactions Graph -->
+              <div class="card" id="card-reactions-graph">
+                <div class="card-header-flex" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+                  <h3 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+                    Support Reactions (Graphical)
+                  </h3>
+                  <div style="display: flex; gap: 16px; align-items: center;">
+                    <!-- Force Unit Control -->
+                    <div style="display: flex; gap: 6px; align-items: center; font-size: 11px; font-weight: 600; color: var(--text-secondary);">
+                      <span>Force =</span>
+                      <select id="result-unit-force" class="form-control" style="font-size: 11px; padding: 2px 6px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 65px; cursor: pointer; min-width: 65px; font-weight: 500;">
+                        <option value="kN" selected>kN</option>
+                        <option value="N">N</option>
+                        <option value="kg">kg</option>
+                        <option value="MTon">MTon</option>
+                        <option value="lbf">lbf</option>
+                        <option value="kip">kip</option>
+                      </select>
+                    </div>
+                    
+                    <!-- Moment Unit Control -->
+                    <div style="display: flex; gap: 6px; align-items: center; font-size: 11px; font-weight: 600; color: var(--text-secondary);">
+                      <span>Moment =</span>
+                      <div style="display: flex; gap: 4px; align-items: center;">
+                        <select id="reactions-unit-moment-force" class="form-control" style="font-size: 11px; padding: 2px 4px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 60px; cursor: pointer; min-width: 60px; font-weight: 500;">
+                          <option value="kN" selected>kN</option>
+                          <option value="N">N</option>
+                          <option value="kg">kg</option>
+                          <option value="MTon">MTon</option>
+                          <option value="lbf">lbf</option>
+                          <option value="kip">kip</option>
+                        </select>
+                        <span style="font-size: 11px; font-weight: bold; color: var(--text-secondary); margin: 0 1px;">·</span>
+                        <select id="reactions-unit-moment-dist" class="form-control" style="font-size: 11px; padding: 2px 4px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 55px; cursor: pointer; min-width: 55px; font-weight: 500;">
+                          <option value="m" selected>m</option>
+                          <option value="cm">cm</option>
+                          <option value="mm">mm</option>
+                          <option value="in">in</option>
+                          <option value="ft">ft</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm toggle-window-btn" data-target="card-reactions-graph" style="font-size: 11px; padding: 2px 8px; height: 24px; border-radius: 4px; font-weight: 600;">Hide</button>
+                  </div>
+                </div>
+                <div class="visualization-box" style="height: 180px; min-height: 180px; margin-bottom: 0; position: relative; touch-action: none;">
+                  <div id="reactions-diagram-container" style="width: 100%; height: 100%;"></div>
+                  <!-- Hover tooltip indicator for support reactions -->
+                  <div id="reactions-hover-tooltip" style="position: absolute; display: none; background: var(--bg-card); border: 1px solid var(--accent-secondary); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; z-index: 10; box-shadow: var(--shadow-sm); font-weight: 600;"></div>
+                </div>
+              </div>
+
+              <!-- Card 2: SFD Graph -->
+              <div class="card" id="card-sfd-graph">
+                <div class="card-header-flex" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+                  <h3 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19V5l12 14V5" stroke-linecap="round"/></svg>
+                    Shear Force Diagram (SFD)
+                  </h3>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <select id="result-unit-force-sfd" class="form-control" style="font-size: 11px; padding: 2px 6px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 65px; cursor: pointer; min-width: 65px;">
+                      <option value="kN" selected>kN</option>
+                      <option value="N">N</option>
+                      <option value="kg">kg</option>
+                      <option value="MTon">MTon</option>
+                      <option value="lbf">lbf</option>
+                      <option value="kip">kip</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm btn-clear-markers" id="btn-clear-sfd" data-diagram="sfd" style="font-size: 11px; padding: 2px 8px; height: 24px; border-radius: 4px; display: none; background: rgba(239,68,68,0.1); color: var(--error); border: 1px solid rgba(239,68,68,0.2); font-weight: 600;">Clear Markers</button>
+                    <button class="btn btn-secondary btn-sm toggle-window-btn" data-target="card-sfd-graph" style="font-size: 11px; padding: 2px 8px; height: 24px; border-radius: 4px; font-weight: 600;">Hide</button>
+                  </div>
+                </div>
+                <div class="visualization-box" style="height: 220px; min-height: 220px; margin-bottom: 0; position: relative; touch-action: none;">
+                  <div id="sfd-diagram-container" style="width: 100%; height: 100%;"></div>
+                </div>
+              </div>
+
+              <!-- Card 3: BMD Graph -->
+              <div class="card" id="card-bmd-graph">
+                <div class="card-header-flex" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+                  <h3 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20s-8-4.5-8-11.5V5l8-2 8 2v3.5c0 7-8 11.5-8 11.5z" stroke-linecap="round"/></svg>
+                    Bending Moment Diagram (BMD)
+                  </h3>
+                  <div style="display: flex; gap: 4px; align-items: center;">
+                    <select id="result-unit-moment-force" class="form-control" style="font-size: 11px; padding: 2px 4px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 60px; cursor: pointer; min-width: 60px;">
+                      <option value="kN" selected>kN</option>
+                      <option value="N">N</option>
+                      <option value="kg">kg</option>
+                      <option value="MTon">MTon</option>
+                      <option value="lbf">lbf</option>
+                      <option value="kip">kip</option>
+                    </select>
+                    <span style="font-size: 11px; font-weight: bold; color: var(--text-secondary); margin: 0 1px;">·</span>
+                    <select id="result-unit-moment-dist" class="form-control" style="font-size: 11px; padding: 2px 4px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 55px; cursor: pointer; min-width: 55px;">
+                      <option value="m" selected>m</option>
+                      <option value="cm">cm</option>
+                      <option value="mm">mm</option>
+                      <option value="in">in</option>
+                      <option value="ft">ft</option>
+                    </select>
+                    <div style="width: 4px;"></div>
+                    <button class="btn btn-secondary btn-sm btn-clear-markers" id="btn-clear-bmd" data-diagram="bmd" style="font-size: 11px; padding: 2px 8px; height: 24px; border-radius: 4px; display: none; background: rgba(239,68,68,0.1); color: var(--error); border: 1px solid rgba(239,68,68,0.2); font-weight: 600;">Clear Markers</button>
+                    <button class="btn btn-secondary btn-sm toggle-window-btn" data-target="card-bmd-graph" style="font-size: 11px; padding: 2px 8px; height: 24px; border-radius: 4px; font-weight: 600;">Hide</button>
+                  </div>
+                </div>
+                <div class="visualization-box" style="height: 220px; min-height: 220px; margin-bottom: 0; position: relative; touch-action: none;">
+                  <div id="bmd-diagram-container" style="width: 100%; height: 100%;"></div>
+                </div>
+              </div>
+
+              <!-- Card 4: AFD Graph -->
+              <div class="card" id="card-afd-graph">
+                <div class="card-header-flex" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+                  <h3 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-linecap="round"/></svg>
+                    Axial Force Diagram (AFD)
+                  </h3>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <select id="result-unit-force-afd" class="form-control" style="font-size: 11px; padding: 2px 6px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 65px; cursor: pointer; min-width: 65px;">
+                      <option value="kN" selected>kN</option>
+                      <option value="N">N</option>
+                      <option value="kg">kg</option>
+                      <option value="MTon">MTon</option>
+                      <option value="lbf">lbf</option>
+                      <option value="kip">kip</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm btn-clear-markers" id="btn-clear-afd" data-diagram="afd" style="font-size: 11px; padding: 2px 8px; height: 24px; border-radius: 4px; display: none; background: rgba(239,68,68,0.1); color: var(--error); border: 1px solid rgba(239,68,68,0.2); font-weight: 600;">Clear Markers</button>
+                    <button class="btn btn-secondary btn-sm toggle-window-btn" data-target="card-afd-graph" style="font-size: 11px; padding: 2px 8px; height: 24px; border-radius: 4px; font-weight: 600;">Hide</button>
+                  </div>
+                </div>
+                <div class="visualization-box" style="height: 220px; min-height: 220px; margin-bottom: 0; position: relative; touch-action: none;">
+                  <div id="afd-diagram-container" style="width: 100%; height: 100%;"></div>
+                </div>
+              </div>
+
+              <!-- Card 5: Deflection Graph -->
+              <div class="card" id="card-deflection-graph">
+                <div class="card-header-flex" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+                  <h3 class="card-title" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 17h8m-8 0V9m0 8l-8-8-4 4" stroke-linecap="round"/></svg>
+                    Deflection Diagram
+                  </h3>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <select id="result-unit-displacement" class="form-control" style="font-size: 11px; padding: 2px 6px; height: 24px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); width: 60px; cursor: pointer; min-width: 60px;">
+                      <option value="mm" selected>mm</option>
+                      <option value="cm">cm</option>
+                      <option value="m">m</option>
+                      <option value="in">in</option>
+                      <option value="ft">ft</option>
+                    </select>
+                    <button class="btn btn-secondary btn-sm btn-clear-markers" id="btn-clear-deflection" data-diagram="deflection" style="font-size: 11px; padding: 2px 8px; height: 24px; border-radius: 4px; display: none; background: rgba(239,68,68,0.1); color: var(--error); border: 1px solid rgba(239,68,68,0.2); font-weight: 600;">Clear Markers</button>
+                    <button class="btn btn-secondary btn-sm toggle-window-btn" data-target="card-deflection-graph" style="font-size: 11px; padding: 2px 8px; height: 24px; border-radius: 4px; font-weight: 600;">Hide</button>
+                  </div>
+                </div>
+                <div class="visualization-box" style="height: 220px; min-height: 220px; margin-bottom: 0; position: relative; touch-action: none;">
+                  <div id="deflection-diagram-container" style="width: 100%; height: 100%;"></div>
+                </div>
+              </div>
+
+              <!-- Global Tooltip and Menus inside the Wrapper -->
+              <div id="beam-diagram-tooltip" style="position: absolute; display: none; background: var(--bg-card); border: 1px solid var(--accent-secondary); color: var(--text-primary); padding: 5px 10px; border-radius: 6px; font-size: 11px; pointer-events: none; z-index: 10; box-shadow: var(--shadow-md); font-weight: 600; white-space: nowrap;"></div>
+              <div id="beam-diagram-menu" style="position: absolute; display: none; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 6px; box-shadow: var(--shadow-md); z-index: 100; gap: 4px; display: flex; flex-direction: column;">
+                <button class="btn btn-primary btn-sm" id="btn-diagram-add-label" style="padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; border-radius: 4px;">+ Add Marker</button>
+                <button class="btn btn-secondary btn-sm" id="btn-diagram-cancel" style="padding: 4px 8px; font-size: 11px; cursor: pointer; border: none; border-radius: 4px;">Cancel</button>
+              </div>
+              <div id="beam-diagram-edit-menu" style="position: absolute; display: none; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; box-shadow: var(--shadow-md); z-index: 100; gap: 8px; display: flex; flex-direction: column; width: 180px;">
+                <button class="btn btn-primary btn-sm" id="btn-edit-marker-move" style="padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; border-radius: 4px;">Move Marker</button>
+                <button class="btn btn-secondary btn-sm" id="btn-edit-marker-pos" style="padding: 6px 12px; font-size: 12px; cursor: pointer; border: none; border-radius: 4px;">Edit Position</button>
+                
+                <div id="edit-marker-input-container" style="display: none; align-items: center; gap: 6px; margin-top: 4px; justify-content: center;">
+                  <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">x =</span>
+                  <input type="number" id="edit-marker-x-input" step="0.01" style="width: 80px; padding: 4px 6px; font-size: 12px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-body); color: var(--text-primary); outline: none;" />
+                  <span id="edit-marker-x-unit" style="font-size: 12px; color: var(--text-muted); font-weight: 500;">m</span>
+                </div>
+                
+                <button class="btn btn-secondary btn-sm" id="btn-edit-marker-delete" style="padding: 6px 12px; font-size: 12px; cursor: pointer; border: none; border-radius: 4px; color: var(--error); background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);">Delete Marker</button>
+                <button class="btn btn-secondary btn-sm" id="btn-edit-marker-close" style="padding: 6px 12px; font-size: 12px; cursor: pointer; border: none; border-radius: 4px;">Cancel</button>
+              </div>
+
+            </div>
+
+            <!-- Support Reactions Card -->
+            <div class="card" style="display: none;">
+              <h3 class="card-title">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round"/></svg>
+                Support Reactions
+              </h3>
+              <div class="table-responsive">
+                <table class="beam-inputs-table" id="table-reactions">
+                  <thead>
+                    <tr class="title-row">
+                      <th style="width: 100px; min-width: 100px; text-align: center;">Support</th>
+                      <th style="width: 120px; min-width: 120px; text-align: center;">Location x</th>
+                      <th style="width: 140px; min-width: 140px; text-align: right;">Reaction R<sub>x</sub></th>
+                      <th style="width: 140px; min-width: 140px; text-align: right;">Reaction R<sub>y</sub></th>
+                      <th style="width: 140px; min-width: 140px; text-align: right;">Moment M</th>
+                    </tr>
+                    <tr class="unit-row">
+                      <th></th>
+                      <th style="text-align: center;">m</th>
+                      <th style="text-align: right;">kN</th>
+                      <th style="text-align: right;">kN</th>
+                      <th style="text-align: right;">kN·m</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colspan="5" style="text-align: center; color: var(--text-secondary);">No active analysis results. Click "Solve Beam Analysis".</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Toast Notification -->
+  <div class="toast" id="toast-notify">
+    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="color: var(--accent-secondary);"><path d="M5 13l4 4L19 7" stroke-linecap="round"/></svg>
+    <span id="toast-message">Copied to clipboard!</span>
+  </div>
+
+  <!-- SheetJS library for Excel Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Scripts with cache busters -->
+  <script src="js/section-properties.js?v=5.5"></script>
+  <script src="js/canvas.js?v=5.5"></script>
+  <script src="js/app.js?v=5.5"></script>
+  <script src="js/beam-analysis.js?v=5.5"></script>
+</body>
+</html>

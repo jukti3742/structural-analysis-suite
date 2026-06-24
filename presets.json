@@ -1,0 +1,47 @@
+{
+  "I-Section": {
+    "European I-Beams (IPE)": [
+      { "name": "IPE 80", "D": 80, "btf": 46, "ttf": 5.2, "bbf": 46, "tbf": 5.2, "tw": 3.8 },
+      { "name": "IPE 100", "D": 100, "btf": 55, "ttf": 5.7, "bbf": 55, "tbf": 5.7, "tw": 4.1 },
+      { "name": "IPE 140", "D": 140, "btf": 73, "ttf": 6.9, "bbf": 73, "tbf": 6.9, "tw": 4.7 },
+      { "name": "IPE 200", "D": 200, "btf": 100, "ttf": 8.5, "bbf": 100, "tbf": 8.5, "tw": 5.6 },
+      { "name": "IPE 300", "D": 300, "btf": 150, "ttf": 10.7, "bbf": 150, "tbf": 10.7, "tw": 7.1 },
+      { "name": "IPE 400", "D": 400, "btf": 180, "ttf": 13.5, "bbf": 180, "tbf": 13.5, "tw": 8.6 },
+      { "name": "IPE 600", "D": 600, "btf": 220, "ttf": 19.0, "bbf": 220, "tbf": 19.0, "tw": 12.0 }
+    ],
+    "European Wide Flange (HEB)": [
+      { "name": "HEB 100", "D": 100, "btf": 100, "ttf": 10.0, "bbf": 100, "tbf": 10.0, "tw": 6.0 },
+      { "name": "HEB 160", "D": 160, "btf": 160, "ttf": 13.0, "bbf": 160, "tbf": 13.0, "tw": 8.0 },
+      { "name": "HEB 200", "D": 200, "btf": 200, "ttf": 15.0, "bbf": 200, "tbf": 15.0, "tw": 9.0 },
+      { "name": "HEB 300", "D": 300, "btf": 300, "ttf": 19.0, "bbf": 300, "tbf": 19.0, "tw": 11.0 },
+      { "name": "HEB 500", "D": 500, "btf": 300, "ttf": 28.0, "bbf": 300, "tbf": 28.0, "tw": 14.5 }
+    ],
+    "American Wide Flange (W-Shapes)": [
+      { "name": "W 10x49", "D": 253.0, "btf": 254.0, "ttf": 14.2, "bbf": 254.0, "tbf": 14.2, "tw": 8.6 },
+      { "name": "W 12x26", "D": 310.0, "btf": 165.0, "ttf": 9.7, "bbf": 165.0, "tbf": 9.7, "tw": 5.8 },
+      { "name": "W 14x90", "D": 356.0, "btf": 369.0, "ttf": 18.0, "bbf": 369.0, "tbf": 18.0, "tw": 11.2 },
+      { "name": "W 18x50", "D": 457.0, "btf": 190.0, "ttf": 14.5, "bbf": 190.0, "tbf": 14.5, "tw": 9.0 },
+      { "name": "W 24x76", "D": 608.0, "btf": 228.0, "ttf": 17.3, "bbf": 228.0, "tbf": 17.3, "tw": 11.2 }
+    ],
+    "British Universal Beams (UB)": [
+      { "name": "UB 203x133x30", "D": 206.8, "btf": 133.9, "ttf": 9.6, "bbf": 133.9, "tbf": 9.6, "tw": 6.4 },
+      { "name": "UB 305x165x40", "D": 303.4, "btf": 165.0, "ttf": 10.2, "bbf": 165.0, "tbf": 10.2, "tw": 6.0 },
+      { "name": "UB 406x178x60", "D": 406.4, "btf": 177.9, "ttf": 12.8, "bbf": 177.9, "tbf": 12.8, "tw": 7.8 }
+    ]
+  },
+  "Box-Section": {
+    "European Rectangular Hollow (RHS)": [
+      { "name": "RHS 100x50x5", "D": 100, "btf": 50, "ttf": 5, "bbf": 50, "tbf": 5, "tw": 5 },
+      { "name": "RHS 120x60x6", "D": 120, "btf": 60, "ttf": 6, "bbf": 60, "tbf": 6, "tw": 6 },
+      { "name": "RHS 150x100x8", "D": 150, "btf": 100, "ttf": 8, "bbf": 100, "tbf": 8, "tw": 8 },
+      { "name": "RHS 200x100x10", "D": 200, "btf": 100, "ttf": 10, "bbf": 100, "tbf": 10, "tw": 10 },
+      { "name": "RHS 300x200x12", "D": 300, "btf": 200, "ttf": 12, "bbf": 200, "tbf": 12, "tw": 12 }
+    ],
+    "European Square Hollow (SHS)": [
+      { "name": "SHS 80x80x6", "D": 80, "btf": 80, "ttf": 6, "bbf": 80, "tbf": 6, "tw": 6 },
+      { "name": "SHS 100x100x8", "D": 100, "btf": 100, "ttf": 8, "bbf": 100, "tbf": 8, "tw": 8 },
+      { "name": "SHS 150x150x10", "D": 150, "btf": 150, "ttf": 10, "bbf": 150, "tbf": 10, "tw": 10 },
+      { "name": "SHS 200x200x12", "D": 200, "btf": 200, "ttf": 12, "bbf": 200, "tbf": 12, "tw": 12 }
+    ]
+  }
+}
