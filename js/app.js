@@ -123,7 +123,7 @@ let elBbf, elSliderBbf, elTbf, elSliderTbf, elTw, elSliderTw;
 let elBtp, elSliderBtp, elTtp, elSliderTtp;
 let elBbp, elSliderBbp, elTbp, elSliderTbp;
 let elGroupBbf, elGroupTbf, elGroupTopPlate, elGroupBottomPlate, elValidationError;
-let elBtnPrint, elBtnExcel, elBtnCopy, elToast, elToastMsg;
+let elBtnCopy, elToast, elToastMsg;
 
 document.addEventListener('DOMContentLoaded', async () => {
   initializeElements();
@@ -540,8 +540,6 @@ function initializeElements() {
   elValidationError = document.getElementById('validation-error');
   
   // Actions
-  elBtnPrint = document.getElementById('btn-print');
-  elBtnExcel = document.getElementById('btn-excel');
   elBtnCopy = document.getElementById('btn-copy');
   
   // Feedback
@@ -580,8 +578,6 @@ function setupEventListeners() {
   setupHoverHighlights();
 
   // Action Buttons
-  elBtnPrint.addEventListener('click', () => window.print());
-  elBtnExcel.addEventListener('click', exportResultsToExcel);
   elBtnCopy.addEventListener('click', copyResultsToClipboard);
 
   // Row-Specific Unit Selects
@@ -1153,148 +1149,7 @@ function copyResultsToClipboard() {
     });
 }
 
-// Export formatted inputs, outputs, and metadata to Excel spreadsheet
-function exportResultsToExcel() {
-  const activeTab = document.querySelector('.nav-menu .nav-item.active');
-  const sectionKey = activeTab ? activeTab.getAttribute('data-section') : 'I-Section';
-  const rawResults = sectionKey === 'Box-Section'
-    ? calculateBoxSectionProperties(STATE.params, STATE.inputUnit)
-    : calculateISectionProperties(STATE.params, STATE.inputUnit);
-  
-  const getVal = (propId, rawValue, type) => {
-    const unit = STATE.rowUnits[propId];
-    const conv = UNIT_CONVERSIONS[unit];
-    let val = rawValue;
-    if (type === 'length') val = rawValue * conv.length;
-    else if (type === 'area') val = rawValue * conv.area;
-    else if (type === 'modulus') val = rawValue * conv.modulus;
-    else if (type === 'inertia') val = rawValue * conv.inertia;
-    else if (type === 'warping') val = rawValue * conv.warping;
-    return Number(val.toFixed(2));
-  };
 
-  const getUnitLabel = (propId, type) => {
-    const unit = STATE.rowUnits[propId];
-    if (type === 'area') return unit + '²';
-    if (type === 'modulus') return unit + '³';
-    if (type === 'inertia') return unit + '⁴';
-    if (type === 'warping') return unit + '⁶';
-    return unit;
-  };
-
-  const fmtVal = (num) => {
-    return Number(num.toFixed(2));
-  };
-
-  const standardVal = elStandardSelect ? elStandardSelect.value : 'custom';
-  const standardName = standardVal === 'custom' ? 'Custom' : standardVal;
-  const profileName = STATE.currentPreset === 'custom' ? 'Custom' : document.getElementById('print-preset-val').textContent.trim();
-  const sectionType = sectionKey === 'Box-Section' ? 'Box Section' : 'I Section';
-
-  // Excel layout using Array of Arrays
-  const aoaData = [
-    ["Apex Structural Analysis Suite - Section Properties Report"],
-    [],
-    ["REPORT METADATA"],
-    ["Generated Timestamp", new Date().toISOString()],
-    ["Section Type", sectionType],
-    ["Standard / Manufacturer", standardName],
-    ["Section Profile Preset", profileName],
-    ["Active Input Unit", STATE.inputUnit],
-    [],
-    ["1. INPUT DIMENSIONS"],
-    ["Parameter Name", "Symbol", "Value", "Unit"]
-  ];
-
-  if (sectionKey === 'Box-Section') {
-    aoaData.push(["Overall Height", "D", STATE.params.D, STATE.inputUnit]);
-    aoaData.push(["Width", "btf", STATE.params.btf, STATE.inputUnit]);
-    aoaData.push(["Flange Thickness", "ttf", STATE.params.ttf, STATE.inputUnit]);
-    aoaData.push(["Web Thickness", "tw", STATE.params.tw, STATE.inputUnit]);
-  } else {
-    aoaData.push(["Overall Depth", "D", STATE.params.D, STATE.inputUnit]);
-    aoaData.push(["Top Flange Width", "btf", STATE.params.btf, STATE.inputUnit]);
-    aoaData.push(["Top Flange Thickness", "ttf", STATE.params.ttf, STATE.inputUnit]);
-    if (!STATE.syncFlanges) {
-      aoaData.push(["Bottom Flange Width", "bbf", STATE.params.bbf, STATE.inputUnit]);
-      aoaData.push(["Bottom Flange Thickness", "tbf", STATE.params.tbf, STATE.inputUnit]);
-    } else {
-      aoaData.push(["Flange Width (Symmetric)", "btf", STATE.params.btf, STATE.inputUnit]);
-      aoaData.push(["Flange Thickness (Symmetric)", "ttf", STATE.params.ttf, STATE.inputUnit]);
-    }
-    aoaData.push(["Web Thickness", "tw", STATE.params.tw, STATE.inputUnit]);
-  }
-
-  if (STATE.params.hasTopPlate) {
-    aoaData.push(["Top Cover Plate Width", "btp", STATE.params.btp, STATE.inputUnit]);
-    aoaData.push(["Top Cover Plate Thickness", "ttp", STATE.params.ttp, STATE.inputUnit]);
-  }
-  if (STATE.params.hasBottomPlate) {
-    aoaData.push(["Bottom Cover Plate Width", "bbp", STATE.params.bbp, STATE.inputUnit]);
-    aoaData.push(["Bottom Cover Plate Thickness", "tbp", STATE.params.tbp, STATE.inputUnit]);
-  }
-
-  aoaData.push(
-    [],
-    ["2. CALCULATED PROPERTIES"],
-    ["Property Name", "Symbol", "Value", "Unit"]
-  );
-
-  const propertiesList = [
-    { id: 'A', name: "Cross-Sectional Area", type: 'area', sym: "A" },
-    { id: 'P', name: "Perimeter", type: 'length', sym: "P" },
-    { id: 'yc', name: "Centroid from Bottom Fiber", type: 'length', sym: "yc" },
-    { id: 'yt', name: "Centroid from Top Fiber", type: 'length', sym: "yt" },
-    { id: 'Ixx', name: "Moment of Inertia about Major Axis", type: 'inertia', sym: "Ixx" },
-    { id: 'Iyy', name: "Moment of Inertia about Minor Axis", type: 'inertia', sym: "Iyy" },
-    { id: 'rxx', name: "Radius of Gyration about Major Axis", type: 'length', sym: "rxx" },
-    { id: 'ryy', name: "Radius of Gyration about Minor Axis", type: 'length', sym: "ryy" },
-    { id: 'Sxt', name: "Elastic Section Modulus at Top Fiber", type: 'modulus', sym: "Sxt" },
-    { id: 'Sxb', name: "Elastic Section Modulus at Bottom Fiber", type: 'modulus', sym: "Sxb" },
-    { id: 'Sy', name: "Elastic Section Modulus about Minor Axis", type: 'modulus', sym: "Sy" },
-    { id: 'Zxx', name: "Plastic Section Modulus about Major Axis", type: 'modulus', sym: "Zxx" },
-    { id: 'Zyy', name: "Plastic Section Modulus about Minor Axis", type: 'modulus', sym: "Zyy" },
-    { id: 'J', name: "Torsional Constant", type: 'inertia', sym: "J" },
-    { id: 'Cw', name: "Warping Constant", type: 'warping', sym: "Cw" }
-  ];
-
-  propertiesList.forEach(prop => {
-    const rawVal = rawResults[prop.id];
-    const converted = getVal(prop.id, rawVal, prop.type);
-    const formatted = fmtVal(converted);
-    const unitLabel = getUnitLabel(prop.id, prop.type);
-    aoaData.push([prop.name, prop.sym, formatted, unitLabel]);
-  });
-
-  // Create sheet and workbook
-  const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
-  const workbook = XLSX.utils.book_new();
-
-  // Set explicit column widths to prevent cutoff
-  worksheet['!cols'] = [
-    { wch: 42 }, // Name
-    { wch: 10 }, // Symbol
-    { wch: 16 }, // Value
-    { wch: 12 }  // Unit
-  ];
-
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Section Properties");
-
-  // Format file name based on preset
-  let filename = "section_properties.xlsx";
-  if (STATE.currentPreset !== 'custom') {
-    const cleanPreset = profileName.replace(/[^a-zA-Z0-9]/g, '_');
-    filename = `${cleanPreset}_properties.xlsx`;
-  }
-
-  try {
-    XLSX.writeFile(workbook, filename);
-    showToast("Excel spreadsheet exported successfully!");
-  } catch (error) {
-    console.error("Excel export failed:", error);
-    showToast("Excel export failed. Please try again.", true);
-  }
-}
 
 function showToast(msg, isError = false) {
   elToastMsg.textContent = msg;

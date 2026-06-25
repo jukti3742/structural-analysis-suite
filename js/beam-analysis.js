@@ -453,6 +453,26 @@
       elBtnSolve.addEventListener('click', solveBeamModel);
     }
 
+    // Set up direct report generation event listener
+    const elBtnOpenReportConfig = document.getElementById('btn-open-report-config');
+    if (elBtnOpenReportConfig) {
+      elBtnOpenReportConfig.addEventListener('click', () => {
+        const config = {
+          projectTitle: 'Beam Analysis Project',
+          engineerName: 'Design Engineer',
+          clientRef: 'General Reference',
+          notes: '',
+          reportType: 'general'
+        };
+        if (window.ReportGenerator) {
+          window.ReportGenerator.generate(config, window.getBeamState());
+        } else {
+          console.error("ReportGenerator is not loaded.");
+          alert("Error: Report Generator not found.");
+        }
+      });
+    }
+
     // Set up diagram tab selectors
     document.querySelectorAll('.diagram-tab').forEach(tab => {
       tab.addEventListener('click', (e) => {
@@ -897,8 +917,8 @@
       }
       
       const padT = 25;
-      const padB = 40;
-      const svgH = 180;
+      const padB = 50;
+      const svgH = 200;
       const graphH = svgH - padT - padB;
       
       const getYPixel = (y) => {
@@ -2496,6 +2516,10 @@
       diagramData = null;
       reactionsData = null;
       renderActiveDiagram();
+      const elBtnOpenReport = document.getElementById('btn-open-report-config');
+      if (elBtnOpenReport) {
+        elBtnOpenReport.setAttribute('disabled', 'true');
+      }
       return;
     }
 
@@ -2591,11 +2615,20 @@
 
         renderReactionsTable();
         renderActiveDiagram();
+        
+        const elBtnOpenReport = document.getElementById('btn-open-report-config');
+        if (elBtnOpenReport) {
+          elBtnOpenReport.removeAttribute('disabled');
+        }
       })
       .catch(err => {
         console.error(err);
         if (rxBody) {
           rxBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--error); font-weight: 500;">Solver error: ${err.message}. Please check supports configuration.</td></tr>`;
+        }
+        const elBtnOpenReport = document.getElementById('btn-open-report-config');
+        if (elBtnOpenReport) {
+          elBtnOpenReport.setAttribute('disabled', 'true');
         }
       });
   }
@@ -2985,10 +3018,10 @@
 
   function renderSingleDiagramSVG(diagramType) {
     const svgW = 600;
-    const svgH = 180;
+    const svgH = 200;
     const padR = 40;
     const padT = 25;
-    const padB = 40;
+    const padB = 50;
 
     const c_dist = getDistFactor(currentUnitBeamLength);
     const c_force = getForceFactor(currentUnitForce);
@@ -3245,13 +3278,35 @@
       const placement = getBestPlacement({ x: px, y: py }, pt.y, isMax, activeBoxes);
       if (!placement) return;
       
+      // Clamp placement box to stay within viewBox boundaries (0, 0, svgW, svgH)
+      const str = pt.y.toFixed(2) + " " + propUnit;
+      const w = str.length * 8 + 6;
+      let rx = placement.box.x1;
+      let ry = placement.box.y1;
+      
+      const margin = 5;
+      if (rx < margin) rx = margin;
+      if (rx + w > svgW - margin) rx = svgW - w - margin;
+      if (ry < margin) ry = margin;
+      if (ry + 14 > svgH - margin) ry = svgH - 14 - margin;
+      
+      let px_final = rx;
+      if (placement.anchor === 'middle') {
+        px_final = rx + w / 2;
+      } else if (placement.anchor === 'start') {
+        px_final = rx;
+      } else {
+        px_final = rx + w;
+      }
+      let py_final = ry + 11;
+      
       extremaMarkersSvg += `
         <circle cx="${px}" cy="${py}" r="4.5" fill="var(--bg-card)" stroke="${isMax ? 'var(--success)' : 'var(--error)'}" stroke-width="2" />
-        <text x="${placement.x}" y="${placement.y}" class="diagram-tick-text" font-weight="700" text-anchor="${placement.anchor}" fill="var(--text-primary)" style="font-size: 13px;">
+        <text x="${px_final}" y="${py_final}" class="diagram-tick-text" font-weight="700" text-anchor="${placement.anchor}" fill="var(--text-primary)" style="font-size: 13px;">
           ${pt.y.toFixed(2)} ${propUnit}
         </text>
       `;
-      activeBoxes.push(placement.box);
+      activeBoxes.push({ x1: rx, x2: rx + w, y1: ry, y2: ry + 14 });
     };
 
     if (Math.abs(maxPt.y - minPt.y) > 1e-4) {
@@ -3289,25 +3344,37 @@
       if (hasOffset) {
         rx = px + marker.dx;
         ry = py + marker.dy;
-        textX = rx + 8;
-        placement.anchor = 'start';
-        placement.y = ry + 16;
-        activeBoxes.push({ x1: rx, x2: rx + totalW, y1: ry, y2: ry + 24 });
       } else {
         const autoPlacement = getBestPlacement({ x: px, y: py }, labelText, 'marker', activeBoxes);
         if (autoPlacement) {
           placement = autoPlacement;
-          activeBoxes.push(placement.box);
-          
-          rx = placement.box.x1;
-          ry = placement.box.y1;
-          textX = rx + 8;
-          placement.anchor = 'start';
-          placement.y = ry + 16;
+          rx = autoPlacement.box.x1;
+          ry = autoPlacement.box.y1;
         } else {
-          return;
+          // Fallback if no placement found, put it above
+          rx = px - totalW / 2;
+          ry = py - 30;
         }
       }
+
+      // Clamp rx and ry to SVG viewBox boundaries (0, 0, svgW, svgH)
+      const margin = 5;
+      if (rx < margin) rx = margin;
+      if (rx + totalW > svgW - margin) rx = svgW - totalW - margin;
+      if (ry < margin) ry = margin;
+      if (ry + 24 > svgH - margin) ry = svgH - 24 - margin;
+
+      textX = rx + 8;
+      placement.anchor = 'start';
+      placement.y = ry + 16;
+
+      // Update dx/dy if it had offset
+      if (hasOffset) {
+        marker.dx = rx - px;
+        marker.dy = ry - py;
+      }
+
+      activeBoxes.push({ x1: rx, x2: rx + totalW, y1: ry, y2: ry + 24 });
 
       let lineX2 = rx + totalW / 2;
       let lineY2 = ry + 12;
@@ -3355,14 +3422,23 @@
       `;
     });
 
+    const xAxisTitle = `Span Length / Position (${currentUnitBeamLength})`;
+    const xAxisTitleSvg = `
+      <text x="${padL + graphW / 2}" y="${svgH - 8}" class="diagram-axis-title" text-anchor="middle">
+        ${xAxisTitle}
+      </text>
+    `;
+
     const svgContent = `
       <svg data-diagram="${diagramType}" data-padl="${padL}" viewBox="0 0 ${svgW} ${svgH}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 0;">
         <line x1="${padL}" y1="${padT}" x2="${svgW - padR}" y2="${padT}" class="diagram-grid" />
-        <line x1="${padL}" y1="${svgH - padB}" x2="${svgW - padR}" y2="${svgH - padB}" class="diagram-grid" />
-        <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${svgH - padB}" class="diagram-axis" />
+        <line x1="${padL}" y1="${svgH - padB}" x2="${svgW - padR}" y2="${svgH - padB}" class="diagram-axis" stroke-width="1.5" />
+        <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${svgH - padB}" class="diagram-axis" stroke-width="1.5" />
         
         ${xTicksSvg}
         ${yTicksSvg}
+        
+        ${xAxisTitleSvg}
         
         <path d="${fillD}" class="${fillClass}" />
         ${zeroLineSvg}
@@ -3982,6 +4058,32 @@
         results.push({ name: "Diagram Markers and Tooltips Interaction", status: "FAIL", error: e.message });
       }
 
+      // TEST 9: Report Generator state retrieval and extremum calculation
+      try {
+        assert(typeof window.getBeamState === 'function', "getBeamState is not registered globally");
+        const state = window.getBeamState();
+        assert(state && state.L !== undefined, "getBeamState returned invalid state");
+        
+        assert(window.ReportGenerator, "ReportGenerator is not registered globally");
+        
+        // Mock points data to verify calculateExtremums
+        const mockPoints = [
+          { x: 0.0, shear: -5000.0, moment: 0.0, axial: 0.0, deflection: 0.0 },
+          { x: 3.0, shear: 5000.0, moment: 15000.0, axial: 1000.0, deflection: -0.002 },
+          { x: 6.0, shear: 0.0, moment: -5000.0, axial: -500.0, deflection: 0.001 }
+        ];
+        
+        const extremums = window.ReportGenerator.calculateExtremums(mockPoints);
+        assertAlmostEqual(extremums.minShear, -5.0, 0.1, "minShear calculation is incorrect (expected value scaled to kN)");
+        assertAlmostEqual(extremums.maxShear, 5.0, 0.1, "maxShear calculation is incorrect");
+        assertAlmostEqual(extremums.maxMoment, 15.0, 0.1, "maxMoment calculation is incorrect (expected value scaled to kN.m)");
+        assertAlmostEqual(extremums.minDeflect, -2.0, 0.1, "minDeflect calculation is incorrect (expected value scaled to mm)");
+        
+        results.push({ name: "Report Generator State & Calculations", status: "PASS" });
+      } catch (e) {
+        results.push({ name: "Report Generator State & Calculations", status: "FAIL", error: e.message });
+      }
+
       // TEST 10: Support Reactions Hover Tooltip
       try {
         const elReactionsContainer = document.getElementById('reactions-diagram-container');
@@ -4210,6 +4312,18 @@
 
     console.log(`${logPrefix}Test Suite finished. Results:`, results);
   }
+
+  // Expose state retrieval globally for the Report Generator
+  window.getBeamState = function () {
+    return {
+      L, E, supports, loads, diagramData, reactionsData, diagramMarkers,
+      resultUnitForce, resultUnitForceSFD, resultUnitForceAFD,
+      resultUnitMoment, resultUnitDisplacement,
+      currentUnitBeamLength, currentUnitDist, currentUnitForce,
+      currentUnitMoment, currentUnitUDL, currentUnitE, currentUnitAngle,
+      getDistFactor, getForceFactor, getMomentFactor
+    };
+  };
 
   window.runUnitTests = runTestSuite;
 
