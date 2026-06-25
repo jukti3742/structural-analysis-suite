@@ -4069,6 +4069,35 @@
         results.push({ name: "Dynamic Load Stack Scaling", status: "FAIL", error: e.message });
       }
 
+      // TEST 12: Mobile Responsive Sidebar Elements
+      try {
+        const sidebar = document.querySelector('.sidebar');
+        const toggle = document.getElementById('sidebar-toggle');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        
+        assert(sidebar, "Sidebar navigation element not found");
+        assert(toggle, "Sidebar mobile toggle button not found");
+        assert(backdrop, "Sidebar backdrop element not found");
+        
+        // Initial state: not active
+        assert(!sidebar.classList.contains('active'), "Sidebar should not be active initially");
+        assert(!backdrop.classList.contains('active'), "Backdrop should not be active initially");
+        
+        // Trigger toggle click
+        toggle.click();
+        assert(sidebar.classList.contains('active'), "Sidebar should become active after toggle click");
+        assert(backdrop.classList.contains('active'), "Backdrop should become active after toggle click");
+        
+        // Trigger backdrop click to close
+        backdrop.click();
+        assert(!sidebar.classList.contains('active'), "Sidebar should be inactive after backdrop click");
+        assert(!backdrop.classList.contains('active'), "Backdrop should be inactive after backdrop click");
+        
+        results.push({ name: "Mobile Responsive Sidebar Elements", status: "PASS" });
+      } catch (e) {
+        results.push({ name: "Mobile Responsive Sidebar Elements", status: "FAIL", error: e.message });
+      }
+
     } catch (globalErr) {
       results.push({ name: "Global Testing Flow Execution", status: "FAIL", error: globalErr.message });
     }

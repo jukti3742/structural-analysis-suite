@@ -586,6 +586,31 @@ function setupEventListeners() {
 
   // Row-Specific Unit Selects
   setupRowUnitSelectListeners();
+
+  // Mobile Sidebar Event Listeners
+  const elSidebar = document.querySelector('.sidebar');
+  const elSidebarToggle = document.getElementById('sidebar-toggle');
+  const elSidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+  if (elSidebar && elSidebarToggle && elSidebarBackdrop) {
+    elSidebarToggle.addEventListener('click', () => {
+      elSidebar.classList.toggle('active');
+      elSidebarBackdrop.classList.toggle('active');
+    });
+
+    elSidebarBackdrop.addEventListener('click', () => {
+      elSidebar.classList.remove('active');
+      elSidebarBackdrop.classList.remove('active');
+    });
+
+    document.querySelectorAll('.nav-menu .nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (item.classList.contains('disabled')) return;
+        elSidebar.classList.remove('active');
+        elSidebarBackdrop.classList.remove('active');
+      });
+    });
+  }
 }
 
 function setupRowUnitSelectListeners() {
