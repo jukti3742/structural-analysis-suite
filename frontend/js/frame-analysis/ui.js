@@ -34,6 +34,22 @@
       });
     });
 
+    // Selection toolbar button tool switching
+    document.querySelectorAll('.btn-select-tool').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-select-tool').forEach(b => b.classList.remove('active-tab-btn'));
+        btn.classList.add('active-tab-btn');
+        const toolName = btn.id.replace('tool-select-', '');
+        window.FrameCanvas.setSelectionTool(toolName);
+        
+        // Match bottom subtabs automatically when switching tools for better UX
+        const subtab = document.getElementById(`subtab-${toolName === 'member' ? 'members' : (toolName + 's')}`);
+        if (subtab && !subtab.classList.contains('active')) {
+          subtab.click();
+        }
+      });
+    });
+
     // View direction buttons
     document.getElementById('btn-view-3d').addEventListener('click', () => window.FrameCanvas.setViewDirection('3d'));
     document.getElementById('btn-view-xy').addEventListener('click', () => window.FrameCanvas.setViewDirection('xy'));
@@ -518,6 +534,30 @@
           </td>
         </tr>
       `).join('');
+
+      // Attach selection synchronization listeners
+      const rows = tbodyMembers.querySelectorAll('tr');
+      rows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          const rowMemberId = firstCell.innerText.trim();
+          if (window.FrameCanvas && window.FrameCanvas.selectedMemberId === rowMemberId) {
+            row.classList.add('selected-row');
+          }
+        }
+
+        row.addEventListener('click', (e) => {
+          if (e.target.classList.contains('delete-btn')) return;
+          const firstCell = row.querySelector('td');
+          if (firstCell && window.FrameCanvas) {
+            const memberId = firstCell.innerText.trim();
+            window.FrameCanvas.selectedMemberId = memberId;
+            window.FrameCanvas.render();
+            rows.forEach(r => r.classList.remove('selected-row'));
+            row.classList.add('selected-row');
+          }
+        });
+      });
     }
 
     // 3. Supports Table
@@ -542,6 +582,30 @@
           </tr>
         `;
       }).join('');
+
+      // Attach selection synchronization listeners
+      const rows = tbodySupports.querySelectorAll('tr');
+      rows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          const rowNodeId = firstCell.innerText.trim();
+          if (window.FrameCanvas && window.FrameCanvas.selectedSupportId === rowNodeId) {
+            row.classList.add('selected-row');
+          }
+        }
+
+        row.addEventListener('click', (e) => {
+          if (e.target.classList.contains('delete-btn')) return;
+          const firstCell = row.querySelector('td');
+          if (firstCell && window.FrameCanvas) {
+            const nodeId = firstCell.innerText.trim();
+            window.FrameCanvas.selectedSupportId = nodeId;
+            window.FrameCanvas.render();
+            rows.forEach(r => r.classList.remove('selected-row'));
+            row.classList.add('selected-row');
+          }
+        });
+      });
     }
 
     // 4. Loads Table
@@ -565,6 +629,24 @@
           </tr>
         `;
       }).join('');
+
+      // Attach selection synchronization listeners
+      const rows = tbodyLoads.querySelectorAll('tr');
+      rows.forEach((row, idx) => {
+        if (window.FrameCanvas && window.FrameCanvas.selectedLoadIndex === idx) {
+          row.classList.add('selected-row');
+        }
+
+        row.addEventListener('click', (e) => {
+          if (e.target.classList.contains('delete-btn')) return;
+          if (window.FrameCanvas) {
+            window.FrameCanvas.selectedLoadIndex = idx;
+            window.FrameCanvas.render();
+            rows.forEach(r => r.classList.remove('selected-row'));
+            row.classList.add('selected-row');
+          }
+        });
+      });
     }
   }
 
@@ -801,6 +883,86 @@
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
       // Clear selection if nodeId is null
+      tableRows.forEach(row => row.classList.remove('selected-row'));
+    }
+  };
+
+  window.selectMemberFromCanvas = function(memberId) {
+    const tableRows = document.querySelectorAll('#table-members tbody tr');
+    let targetRow = null;
+
+    tableRows.forEach(row => {
+      const firstCell = row.querySelector('td');
+      if (firstCell) {
+        const rowMemberId = firstCell.innerText.trim();
+        if (rowMemberId === memberId) {
+          row.classList.add('selected-row');
+          targetRow = row;
+        } else {
+          row.classList.remove('selected-row');
+        }
+      }
+    });
+
+    if (targetRow) {
+      const subtabMembers = document.getElementById('subtab-members');
+      if (subtabMembers && !subtabMembers.classList.contains('active')) {
+        subtabMembers.click();
+      }
+      targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      tableRows.forEach(row => row.classList.remove('selected-row'));
+    }
+  };
+
+  window.selectSupportFromCanvas = function(nodeId) {
+    const tableRows = document.querySelectorAll('#table-supports tbody tr');
+    let targetRow = null;
+
+    tableRows.forEach(row => {
+      const firstCell = row.querySelector('td');
+      if (firstCell) {
+        const rowNodeId = firstCell.innerText.trim();
+        if (rowNodeId === nodeId) {
+          row.classList.add('selected-row');
+          targetRow = row;
+        } else {
+          row.classList.remove('selected-row');
+        }
+      }
+    });
+
+    if (targetRow) {
+      const subtabSupports = document.getElementById('subtab-supports');
+      if (subtabSupports && !subtabSupports.classList.contains('active')) {
+        subtabSupports.click();
+      }
+      targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      tableRows.forEach(row => row.classList.remove('selected-row'));
+    }
+  };
+
+  window.selectLoadFromCanvas = function(loadIndex) {
+    const tableRows = document.querySelectorAll('#table-loads tbody tr');
+    let targetRow = null;
+
+    tableRows.forEach((row, idx) => {
+      if (loadIndex !== null && idx === loadIndex) {
+        row.classList.add('selected-row');
+        targetRow = row;
+      } else {
+        row.classList.remove('selected-row');
+      }
+    });
+
+    if (targetRow) {
+      const subtabLoads = document.getElementById('subtab-loads');
+      if (subtabLoads && !subtabLoads.classList.contains('active')) {
+        subtabLoads.click();
+      }
+      targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
       tableRows.forEach(row => row.classList.remove('selected-row'));
     }
   };

@@ -5,9 +5,37 @@
   let scene, camera, renderer, controls, container;
   let objectsGroup; // Group containing all structural objects (nodes, members, supports, loads)
   let selectedNodeId = null;
+  let selectedMemberId = null;
+  let selectedSupportId = null;
+  let selectedLoadIndex = null;
+  let activeSelectionTool = 'node'; // 'node', 'member', 'support', 'load'
 
   const FrameCanvas = {
     selectedNodeId: null,
+    selectedMemberId: null,
+    selectedSupportId: null,
+    selectedLoadIndex: null,
+    activeSelectionTool: 'node',
+
+    setSelectionTool: function(toolName) {
+      activeSelectionTool = toolName;
+      this.activeSelectionTool = toolName;
+      
+      // Clear tooltips on switch
+      const tooltip = document.getElementById('frame-viewport-tooltip');
+      if (tooltip) tooltip.style.display = 'none';
+      
+      // Clear selections
+      selectedNodeId = null;
+      selectedMemberId = null;
+      selectedSupportId = null;
+      selectedLoadIndex = null;
+      this.selectedNodeId = null;
+      this.selectedMemberId = null;
+      this.selectedSupportId = null;
+      this.selectedLoadIndex = null;
+      this.render();
+    },
 
     selectNode: function(nodeId) {
       selectedNodeId = nodeId;
@@ -15,6 +43,33 @@
       this.render();
       if (window.selectNodeFromCanvas) {
         window.selectNodeFromCanvas(nodeId);
+      }
+    },
+
+    selectMember: function(memberId) {
+      selectedMemberId = memberId;
+      this.selectedMemberId = memberId;
+      this.render();
+      if (window.selectMemberFromCanvas) {
+        window.selectMemberFromCanvas(memberId);
+      }
+    },
+
+    selectSupport: function(nodeId) {
+      selectedSupportId = nodeId;
+      this.selectedSupportId = nodeId;
+      this.render();
+      if (window.selectSupportFromCanvas) {
+        window.selectSupportFromCanvas(nodeId);
+      }
+    },
+
+    selectLoad: function(loadIndex) {
+      selectedLoadIndex = loadIndex;
+      this.selectedLoadIndex = loadIndex;
+      this.render();
+      if (window.selectLoadFromCanvas) {
+        window.selectLoadFromCanvas(loadIndex);
       }
     },
 
@@ -91,15 +146,130 @@
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
         
-        const nodeMeshes = objectsGroup.children.filter(child => child.userData && child.userData.nodeId);
-        const intersects = raycaster.intersectObjects(nodeMeshes);
-        
-        if (intersects.length > 0) {
-          const nodeId = intersects[0].object.userData.nodeId;
-          this.selectNode(nodeId);
-        } else {
-          this.selectNode(null);
+        if (activeSelectionTool === 'node') {
+          const nodeMeshes = objectsGroup.children.filter(child => child.userData && child.userData.nodeId);
+          const intersects = raycaster.intersectObjects(nodeMeshes);
+          if (intersects.length > 0) {
+            this.selectNode(intersects[0].object.userData.nodeId);
+          } else {
+            this.selectNode(null);
+          }
+        } else if (activeSelectionTool === 'member') {
+          raycaster.params.Line.threshold = 0.15;
+          const memberMeshes = objectsGroup.children.filter(child => child.userData && child.userData.memberId);
+          const intersects = raycaster.intersectObjects(memberMeshes);
+          if (intersects.length > 0) {
+            this.selectMember(intersects[0].object.userData.memberId);
+          } else {
+            this.selectMember(null);
+          }
+        } else if (activeSelectionTool === 'support') {
+          const supportMeshes = objectsGroup.children.filter(child => child.userData && child.userData.supportNodeId);
+          const intersects = raycaster.intersectObjects(supportMeshes);
+          if (intersects.length > 0) {
+            this.selectSupport(intersects[0].object.userData.supportNodeId);
+          } else {
+            this.selectSupport(null);
+          }
+        } else if (activeSelectionTool === 'load') {
+          const loadIndexable = objectsGroup.children.filter(child => {
+            let hasLoadIdx = child.userData && child.userData.loadIndex !== undefined;
+            if (!hasLoadIdx && child.children) {
+              hasLoadIdx = child.children.some(c => c.userData && c.userData.loadIndex !== undefined);
+            }
+            return hasLoadIdx;
+          });
+          const intersects = raycaster.intersectObjects(loadIndexable, true);
+          let foundLoadIndex = null;
+          for (const hit of intersects) {
+            let obj = hit.object;
+            while (obj) {
+              if (obj.userData && obj.userData.loadIndex !== undefined) {
+                foundLoadIndex = obj.userData.loadIndex;
+                break;
+              }
+              obj = obj.parent;
+            }
+            if (foundLoadIndex !== null) break;
+          }
+          this.selectLoad(foundLoadIndex);
         }
+      });
+
+      // Hover Tooltip listener
+      container.addEventListener('pointermove', (e) => {
+        const rect = container.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+
+        const tooltip = document.getElementById('frame-viewport-tooltip');
+        if (!tooltip) return;
+
+        let hoverContent = '';
+
+        if (activeSelectionTool === 'node') {
+          const nodeMeshes = objectsGroup.children.filter(child => child.userData && child.userData.nodeId);
+          const intersects = raycaster.intersectObjects(nodeMeshes);
+          if (intersects.length > 0) {
+            const nodeId = intersects[0].object.userData.nodeId;
+            const node = window.FrameModel.nodes[nodeId];
+            if (node) {
+              hoverContent = `
+                <div style="font-weight:700; color:var(--accent-secondary); margin-bottom:4px;">Node ID: ${nodeId}</div>
+                <div>X: ${node.x.toFixed(3)} m</div>
+                <div>Y: ${node.y.toFixed(3)} m</div>
+                <div>Z: ${node.z.toFixed(3)} m</div>
+              `;
+            }
+          }
+        } else if (activeSelectionTool === 'member') {
+          raycaster.params.Line.threshold = 0.15;
+          const memberMeshes = objectsGroup.children.filter(child => child.userData && child.userData.memberId);
+          const intersects = raycaster.intersectObjects(memberMeshes);
+          if (intersects.length > 0) {
+            const memberId = intersects[0].object.userData.memberId;
+            const member = window.FrameModel.members[memberId];
+            if (member) {
+              hoverContent = `
+                <div style="font-weight:700; color:var(--accent-secondary); margin-bottom:4px;">Beam ID: ${memberId}</div>
+                <div>Start Node: ${member.startNode}</div>
+                <div>End Node: ${member.endNode}</div>
+                <div>Section: ${member.sectionName}</div>
+              `;
+            }
+          }
+        }
+
+        if (hoverContent) {
+          tooltip.innerHTML = hoverContent;
+          tooltip.style.display = 'block';
+          
+          const tooltipWidth = tooltip.clientWidth || 120;
+          const tooltipHeight = tooltip.clientHeight || 80;
+          
+          let leftPos = e.clientX - rect.left + 15;
+          let topPos = e.clientY - rect.top + 15;
+          
+          if (leftPos + tooltipWidth > rect.width) {
+            leftPos = e.clientX - rect.left - tooltipWidth - 10;
+          }
+          if (topPos + tooltipHeight > rect.height) {
+            topPos = e.clientY - rect.top - tooltipHeight - 10;
+          }
+
+          tooltip.style.left = `${leftPos}px`;
+          tooltip.style.top = `${topPos}px`;
+        } else {
+          tooltip.style.display = 'none';
+        }
+      });
+
+      container.addEventListener('pointerleave', () => {
+        const tooltip = document.getElementById('frame-viewport-tooltip');
+        if (tooltip) tooltip.style.display = 'none';
       });
 
       // 9. Start Animation Loop
@@ -180,8 +350,11 @@
 
         // Render member line
         const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-        const material = new THREE.LineBasicMaterial({ color: 0x4682b4, linewidth: 2 }); // Steel Blue
+        const isSelected = (m.id === selectedMemberId);
+        const colorVal = isSelected ? 0xf1c40f : 0x4682b4; // Gold if selected, Steel Blue otherwise
+        const material = new THREE.LineBasicMaterial({ color: colorVal, linewidth: isSelected ? 4 : 2 });
         const line = new THREE.Line(geometry, material);
+        line.userData = { memberId: m.id };
         objectsGroup.add(line);
 
         // If results exist and we want diagrams/deflections
@@ -221,31 +394,35 @@
         const isRollerY = restraints[1] === true && restraints[0] === false && restraints[2] === false;
 
         let supportMesh;
+        const isSelected = (s.nodeId === selectedSupportId);
+        const supportColor = isSelected ? 0xf1c40f : (isFixed ? 0xd9534f : (isPinned ? 0xf0ad4e : 0x5bc0de));
+
         if (isFixed) {
           // Fixed support: Box base shape
           const geometry = new THREE.BoxGeometry(0.3, 0.15, 0.3);
-          const material = new THREE.MeshLambertMaterial({ color: 0xd9534f }); // Crimson red
+          const material = new THREE.MeshLambertMaterial({ color: supportColor });
           supportMesh = new THREE.Mesh(geometry, material);
           supportMesh.position.set(node.x, node.y - 0.075, node.z);
         } else if (isPinned) {
           // Pinned support: Cone shape pointing up to node
           const geometry = new THREE.ConeGeometry(0.2, 0.3, 4);
-          const material = new THREE.MeshLambertMaterial({ color: 0xf0ad4e }); // Amber
+          const material = new THREE.MeshLambertMaterial({ color: supportColor });
           supportMesh = new THREE.Mesh(geometry, material);
           supportMesh.position.set(node.x, node.y - 0.15, node.z);
         } else {
           // Roller or Custom support: Cylinder shape
           const geometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 8);
-          const material = new THREE.MeshLambertMaterial({ color: 0x5bc0de }); // Teal
+          const material = new THREE.MeshLambertMaterial({ color: supportColor });
           supportMesh = new THREE.Mesh(geometry, material);
           supportMesh.position.set(node.x, node.y - 0.05, node.z);
         }
+        supportMesh.userData = { supportNodeId: s.nodeId };
         objectsGroup.add(supportMesh);
       });
 
       // 4. Draw Loads
       if (showLoads) {
-        loads.forEach(l => {
+        loads.forEach((l, index) => {
           if (l.type === 'NodalLoad') {
             const node = window.FrameModel.nodes[l.nodeId];
             if (!node) return;
@@ -264,8 +441,8 @@
             
             // Draw force arrow
             if (magnitude !== 0) {
-              const color = l.direction.startsWith('M') ? 0xcc55ff : 0xff3333; // Purple for moment, Red for force
-              // Arrow points *towards* node if magnitude is negative, or away if positive
+              const isSelected = (index === selectedLoadIndex);
+              const color = isSelected ? 0xf1c40f : (l.direction.startsWith('M') ? 0xcc55ff : 0xff3333);
               const arrowDir = dir.clone().multiplyScalar(magnitude > 0 ? 1 : -1);
               const startPos = new THREE.Vector3(node.x, node.y, node.z).sub(arrowDir.clone().multiplyScalar(1.2));
               
@@ -277,6 +454,10 @@
                 0.2,
                 0.15
               );
+              // Attach raycast index metadata
+              arrowHelper.line.userData = { loadIndex: index };
+              arrowHelper.cone.userData = { loadIndex: index };
+              arrowHelper.userData = { loadIndex: index };
               objectsGroup.add(arrowHelper);
             }
           } else if (l.type === 'MemberDistributedLoad' || l.type === 'MemberPointLoad') {
@@ -298,14 +479,20 @@
               arrowDir = new THREE.Vector3(nEnd.x - nStart.x, nEnd.y - nStart.y, nEnd.z - nStart.z).normalize();
             }
 
+            const isSelected = (index === selectedLoadIndex);
+            const color = isSelected ? 0xf1c40f : 0xffaa00; // Gold if selected, Orange otherwise
+            
             const arrowHelper = new THREE.ArrowHelper(
               arrowDir,
-              mid.clone().add(new THREE.Vector3(0, 0.8, 0)),
+              mid.clone().sub(arrowDir.clone().multiplyScalar(0.8)),
               0.8,
-              0x00cc44, // Green for member loads
-              0.15,
-              0.1
+              color,
+              0.16,
+              0.12
             );
+            arrowHelper.line.userData = { loadIndex: index };
+            arrowHelper.cone.userData = { loadIndex: index };
+            arrowHelper.userData = { loadIndex: index };
             objectsGroup.add(arrowHelper);
           }
         });
