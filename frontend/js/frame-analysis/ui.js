@@ -140,15 +140,14 @@
     // --- Add Actions ---
     // Add Node
     document.getElementById('btn-add-node').addEventListener('click', () => {
-      const id = document.getElementById('node-input-id').value.trim();
-      const x = parseFloat(document.getElementById('node-input-x').value);
-      const y = parseFloat(document.getElementById('node-input-y').value);
-      const z = parseFloat(document.getElementById('node-input-z').value);
-
-      if (!id) {
-        showToast('Please specify a unique Node ID.');
-        return;
+      let k = 1;
+      while (window.FrameModel.nodes[`N${k}`]) {
+        k++;
       }
+      const id = `N${k}`;
+      const x = parseFloat(document.getElementById('node-input-x').value) || 0.0;
+      const y = parseFloat(document.getElementById('node-input-y').value) || 0.0;
+      const z = parseFloat(document.getElementById('node-input-z').value) || 0.0;
 
       window.FrameModel.addNode(id, x, y, z);
       showToast(`Node ${id} added successfully.`);
@@ -156,21 +155,22 @@
       refreshAllDropdowns();
       updateTablesDisplay();
       window.FrameCanvas.render();
-      
-      // Reset input id
-      document.getElementById('node-input-id').value = '';
     });
 
     // Add Member
     document.getElementById('btn-add-member').addEventListener('click', () => {
-      const id = document.getElementById('member-input-id').value.trim();
+      let k = 1;
+      while (window.FrameModel.members[`M${k}`]) {
+        k++;
+      }
+      const id = `M${k}`;
       const start = document.getElementById('member-input-start').value;
       const end = document.getElementById('member-input-end').value;
       const section = document.getElementById('member-input-section').value;
-      const beta = parseFloat(document.getElementById('member-input-beta').value);
+      const beta = parseFloat(document.getElementById('member-input-beta').value) || 0.0;
 
-      if (!id || !start || !end) {
-        showToast('Please verify Member ID, Start Node, and End Node.');
+      if (!start || !end) {
+        showToast('Please specify both Start Node and End Node.');
         return;
       }
       if (start === end) {
@@ -186,14 +186,11 @@
       };
 
       window.FrameModel.addMember(id, start, end, section, beta, releases);
-      showToast(`Member ${id} added successfully.`);
+      showToast(`Beam ${id} added successfully.`);
       
       refreshAllDropdowns();
       updateTablesDisplay();
       window.FrameCanvas.render();
-
-      // Reset ID
-      document.getElementById('member-input-id').value = '';
     });
 
     // Assign Support

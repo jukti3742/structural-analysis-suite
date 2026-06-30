@@ -1467,7 +1467,7 @@ input:checked + .switch-slider:before {
 /* 3D Frame Workspace Grid Layout */
 .frame-workspace-grid {
   display: grid;
-  grid-template-columns: 1fr 420px;
+  grid-template-columns: 1fr 340px;
   gap: 20px;
   height: calc(100vh - 120px);
   min-height: 580px;
@@ -1486,13 +1486,23 @@ input:checked + .switch-slider:before {
   overflow: hidden;
 }
 
+/* Enforce font size consistency on right sidebar controls */
+.frame-right-panel input,
+.frame-right-panel select,
+.frame-right-panel label,
+.frame-right-panel button,
+.frame-right-panel th,
+.frame-right-panel td,
+.frame-right-panel span {
+  font-size: 0.72rem !important;
+}
+
 /* Active Model Lists Subtabs styles */
 .btn-subtab {
   padding: 4px 10px;
   border-radius: 4px;
   background-color: transparent;
   color: var(--text-secondary);
-  font-size: 0.72rem;
   font-weight: 600;
   transition: all 0.2s ease;
   user-select: none;
@@ -1505,6 +1515,25 @@ input:checked + .switch-slider:before {
   background-color: var(--border-color);
   color: var(--text-primary);
   box-shadow: var(--shadow-sm);
+}
+
+/* Proper visible grid lines for tables in Active Model Elements */
+#frame-list-tables-container table.data-table {
+  border-collapse: collapse;
+  width: 100%;
+  border: 1px solid var(--border-color);
+}
+#frame-list-tables-container table.data-table th,
+#frame-list-tables-container table.data-table td {
+  border: 1px solid var(--border-color) !important;
+  padding: 5px 8px !important;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  text-align: left;
+}
+#frame-list-tables-container table.data-table th {
+  background-color: var(--bg-secondary) !important;
+  font-weight: 600;
 }
 
 #frame-list-tables-container {
