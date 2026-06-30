@@ -4,8 +4,20 @@
 (function() {
   let scene, camera, renderer, controls, container;
   let objectsGroup; // Group containing all structural objects (nodes, members, supports, loads)
+  let selectedNodeId = null;
 
   const FrameCanvas = {
+    selectedNodeId: null,
+
+    selectNode: function(nodeId) {
+      selectedNodeId = nodeId;
+      this.selectedNodeId = nodeId;
+      this.render();
+      if (window.selectNodeFromCanvas) {
+        window.selectNodeFromCanvas(nodeId);
+      }
+    },
+
     init: function(containerId) {
       container = document.getElementById(containerId);
       if (!container) return;
@@ -49,23 +61,46 @@
       dirLight2.position.set(-10, -10, -10);
       scene.add(dirLight2);
 
-      // 6. Add Grid and Axes Helpers
+      // 6. Add Grid Helper
       // Ground grid in XZ plane
       const gridHelper = new THREE.GridHelper(30, 30, 0x555555, 0x2d303e);
       gridHelper.position.y = 0;
       scene.add(gridHelper);
 
-      // Red (X), Green (Y), Blue (Z) Axes
-      const axesHelper = new THREE.AxesHelper(3);
-      axesHelper.position.set(-0.01, 0.01, -0.01); // Slightly offset to prevent z-fighting
-      scene.add(axesHelper);
-
       // 7. Group for model objects
       objectsGroup = new THREE.Group();
       scene.add(objectsGroup);
 
-      // 8. Handle Resizing
+      // 8. Handle Resizing & Pointer Selection clicks
       window.addEventListener('resize', this.onResize.bind(this));
+
+      this.pointerDownPos = { x: 0, y: 0 };
+      container.addEventListener('pointerdown', (e) => {
+        this.pointerDownPos.x = e.clientX;
+        this.pointerDownPos.y = e.clientY;
+      });
+      container.addEventListener('pointerup', (e) => {
+        const dx = Math.abs(e.clientX - this.pointerDownPos.x);
+        const dy = Math.abs(e.clientY - this.pointerDownPos.y);
+        if (dx > 3 || dy > 3) return; // Dragged camera
+        
+        const rect = container.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+        
+        const nodeMeshes = objectsGroup.children.filter(child => child.userData && child.userData.nodeId);
+        const intersects = raycaster.intersectObjects(nodeMeshes);
+        
+        if (intersects.length > 0) {
+          const nodeId = intersects[0].object.userData.nodeId;
+          this.selectNode(nodeId);
+        } else {
+          this.selectNode(null);
+        }
+      });
 
       // 9. Start Animation Loop
       this.animate();
@@ -93,6 +128,7 @@
           scene.background.set(themeBg);
         }
         renderer.render(scene, camera);
+        updateAxesIndicator();
       }
     },
 
@@ -160,9 +196,16 @@
       // 2. Draw Nodes
       nodes.forEach(n => {
         const geometry = new THREE.SphereGeometry(0.12, 16, 16);
-        const material = new THREE.MeshLambertMaterial({ color: 0xe0e0e0 });
+        const isSelected = (n.id === selectedNodeId);
+        const colorVal = isSelected ? 0xf1c40f : 0xe0e0e0;
+        const material = new THREE.MeshLambertMaterial({ 
+          color: colorVal,
+          emissive: isSelected ? 0xd4ac0d : 0x000000,
+          emissiveIntensity: isSelected ? 0.35 : 0.0
+        });
         const sphere = new THREE.Mesh(geometry, material);
         sphere.position.set(n.x, n.y, n.z);
+        sphere.userData = { nodeId: n.id };
         objectsGroup.add(sphere);
       });
 
@@ -372,6 +415,79 @@
       }
     }
   };
+
+  // Screen-space axes indicator helper in top-right corner
+  function updateAxesIndicator() {
+    const canvas = document.getElementById('axes-indicator-canvas');
+    if (!canvas || !camera) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const len = 16; // reduced size to fit in 65x65 container neatly
+
+    const invQ = camera.quaternion.clone().invert();
+    
+    const axes = [
+      { dir: new THREE.Vector3(1, 0, 0), label: '+X', color: '#ff4d4d' },
+      { dir: new THREE.Vector3(0, 1, 0), label: '+Y', color: '#2ecc71' },
+      { dir: new THREE.Vector3(0, 0, 1), label: '+Z', color: '#3498db' }
+    ];
+
+    const projected = axes.map(a => {
+      const proj = a.dir.clone().applyQuaternion(invQ);
+      return {
+        dx: proj.x,
+        dy: proj.y,
+        dz: proj.z,
+        label: a.label,
+        color: a.color
+      };
+    });
+
+    // Sort by depth
+    projected.sort((a, b) => a.dz - b.dz);
+
+    projected.forEach(a => {
+      const tx = cx + a.dx * len;
+      const ty = cy - a.dy * len;
+
+      // Draw axis line
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(tx, ty);
+      ctx.strokeStyle = a.color;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Draw axis positive arrow dot
+      ctx.beginPath();
+      ctx.arc(tx, ty, 2.5, 0, 2 * Math.PI);
+      ctx.fillStyle = a.color;
+      ctx.fill();
+
+      // Draw text offset
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      const offsetLen = len + 9;
+      const lx = cx + a.dx * offsetLen;
+      const ly = cy - a.dy * offsetLen;
+      ctx.fillText(a.label, lx, ly);
+    });
+
+    // Draw center dot
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+  }
 
   // Export globally
   window.FrameCanvas = FrameCanvas;

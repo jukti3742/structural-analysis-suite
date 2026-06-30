@@ -470,6 +470,35 @@
           </td>
         </tr>
       `).join('');
+
+      // Attach click listeners to rows for selection synchronization
+      const rows = tbodyNodes.querySelectorAll('tr');
+      rows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          const rowNodeId = firstCell.innerText.trim();
+          if (window.FrameCanvas && window.FrameCanvas.selectedNodeId === rowNodeId) {
+            row.classList.add('selected-row');
+          }
+        }
+
+        row.addEventListener('click', (e) => {
+          if (e.target.classList.contains('delete-btn') || e.target.classList.contains('editable-coord')) {
+            return; // Don't trigger standard selection click when deleting or editing
+          }
+          
+          const firstCell = row.querySelector('td');
+          if (firstCell && window.FrameCanvas) {
+            const nodeId = firstCell.innerText.trim();
+            window.FrameCanvas.selectedNodeId = nodeId;
+            window.FrameCanvas.render();
+            
+            // Highlight this row and remove highlight from others
+            rows.forEach(r => r.classList.remove('selected-row'));
+            row.classList.add('selected-row');
+          }
+        });
+      });
     }
 
     // 2. Members Table
@@ -746,5 +775,34 @@
     reportWindow.document.write(htmlContent);
     reportWindow.document.close();
   }
+
+  window.selectNodeFromCanvas = function(nodeId) {
+    const tableRows = document.querySelectorAll('#table-nodes tbody tr');
+    let targetRow = null;
+
+    tableRows.forEach(row => {
+      const firstCell = row.querySelector('td');
+      if (firstCell) {
+        const rowNodeId = firstCell.innerText.trim();
+        if (rowNodeId === nodeId) {
+          row.classList.add('selected-row');
+          targetRow = row;
+        } else {
+          row.classList.remove('selected-row');
+        }
+      }
+    });
+
+    if (targetRow) {
+      const subtabNodes = document.getElementById('subtab-nodes');
+      if (subtabNodes && !subtabNodes.classList.contains('active')) {
+        subtabNodes.click();
+      }
+      targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      // Clear selection if nodeId is null
+      tableRows.forEach(row => row.classList.remove('selected-row'));
+    }
+  };
 
 })();

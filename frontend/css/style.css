@@ -1535,7 +1535,7 @@ input:checked + .switch-slider:before {
 #frame-list-tables-container table.data-table td {
   border: 1px solid var(--border-color) !important;
   padding: 5px 8px !important;
-  background: var(--bg-card);
+  background-color: var(--bg-secondary) !important; /* Non-editable (read-only) cells get light grey background by default */
   color: var(--text-primary);
   text-align: left;
 }
@@ -1558,16 +1558,28 @@ input:checked + .switch-slider:before {
 /* Interactive hover and edit indicator for coordinates table cells */
 #frame-list-tables-container table.data-table td.editable-coord {
   cursor: pointer;
+  background-color: var(--bg-visualizer) !important; /* Editable cells retain white (light theme) or canvas dark (dark theme) background */
 }
 #frame-list-tables-container table.data-table td.editable-coord:hover {
   background-color: var(--border-color) !important;
   color: var(--text-primary) !important;
 }
 #frame-list-tables-container table.data-table td.editable-coord:focus {
-  background-color: var(--bg-primary) !important;
+  background-color: var(--bg-visualizer) !important;
   color: var(--text-primary) !important;
   outline: 2px solid var(--accent-primary) !important;
   outline-offset: -2px;
+}
+
+/* Row selection highlight (CAD coordination sync) */
+#frame-list-tables-container table.data-table tr.selected-row td {
+  background-color: rgba(241, 196, 15, 0.18) !important; /* Gold highlight tint */
+  border-top: 1.5px solid var(--warning) !important;
+  border-bottom: 1.5px solid var(--warning) !important;
+  font-weight: bold;
+}
+#frame-list-tables-container table.data-table tr.selected-row td.editable-coord {
+  background-color: rgba(241, 196, 15, 0.28) !important;
 }
 
 
