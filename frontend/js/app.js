@@ -241,6 +241,37 @@ function bindNavigationLinkage() {
   navItems.forEach(item => {
     const sectionKey = item.getAttribute('data-section');
     
+    if (sectionKey === 'Frame-Analysis') {
+      item.classList.remove('disabled');
+      const lockIcon = item.querySelector('.lock-icon');
+      if (lockIcon) lockIcon.remove();
+      
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        // Remove active class from all nav items
+        document.querySelectorAll('.nav-menu .nav-item').forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        // Toggle view containers
+        document.getElementById('section-properties-view').style.display = 'none';
+        document.getElementById('beam-analysis-view').style.display = 'none';
+        document.getElementById('frame-analysis-view').style.display = 'block';
+        
+        // Update header
+        const headerTitle = document.querySelector('.header-title h2.print-hidden');
+        if (headerTitle) {
+          headerTitle.textContent = "3D Frame Analysis";
+        }
+        
+        // Trigger initialization or recalculation in frame solver
+        if (window.initFrameAnalysisView) {
+          window.initFrameAnalysisView();
+        }
+      });
+      return;
+    }
+    
     if (sectionKey === 'Single-Beam') {
       item.classList.remove('disabled');
       const lockIcon = item.querySelector('.lock-icon');

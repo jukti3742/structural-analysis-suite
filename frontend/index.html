@@ -65,6 +65,10 @@
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M3 9v6M21 9v6" stroke-linecap="round"/></svg>
           Single Span Beam
         </a>
+        <a class="nav-item" id="nav-frame-analysis" data-section="Frame-Analysis">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 12h16M12 4v16" stroke-linecap="round"/></svg>
+          3D Frame Analysis
+        </a>
       </nav>
 
 
@@ -1015,6 +1019,370 @@
           </section>
         </div>
       </div>
+
+      <!-- 3D Frame Analysis View Container -->
+      <div id="frame-analysis-view" style="display: none;">
+        <div class="analysis-grid">
+          
+          <!-- Left Control Panel (Sidebar) -->
+          <section class="control-panel">
+            
+            <!-- Tabbed Form Navigation -->
+            <div class="card" style="padding: 10px; margin-bottom: 15px;">
+              <div class="frame-tabs" style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary active-tab-btn" id="btn-tab-nodes" style="flex: 1; font-size: 0.85rem; padding: 6px 4px;">Nodes</button>
+                <button class="btn btn-secondary" id="btn-tab-members" style="flex: 1; font-size: 0.85rem; padding: 6px 4px;">Members</button>
+                <button class="btn btn-secondary" id="btn-tab-supports" style="flex: 1; font-size: 0.85rem; padding: 6px 4px;">Supports</button>
+                <button class="btn btn-secondary" id="btn-tab-loads" style="flex: 1; font-size: 0.85rem; padding: 6px 4px;">Loads</button>
+              </div>
+            </div>
+
+            <!-- Tab content: Nodes -->
+            <div class="card frame-tab-content" id="panel-tab-nodes">
+              <h3>Node Configuration</h3>
+              <p class="section-desc">Add or edit spatial coordinates for frame joints.</p>
+              
+              <div class="input-grid">
+                <div class="input-group">
+                  <label for="node-input-id">Node ID</label>
+                  <input type="text" id="node-input-id" placeholder="e.g. N1" class="form-control">
+                </div>
+                <div class="input-group">
+                  <label for="node-input-x">X (m)</label>
+                  <input type="number" id="node-input-x" value="0.0" step="0.5" class="form-control">
+                </div>
+                <div class="input-group">
+                  <label for="node-input-y">Y (m)</label>
+                  <input type="number" id="node-input-y" value="0.0" step="0.5" class="form-control">
+                </div>
+                <div class="input-group">
+                  <label for="node-input-z">Z (m)</label>
+                  <input type="number" id="node-input-z" value="0.0" step="0.5" class="form-control">
+                </div>
+              </div>
+              
+              <button class="btn btn-primary" id="btn-add-node" style="width: 100%; margin-top: 15px;">Add / Update Node</button>
+              
+              <div class="table-responsive" style="max-height: 180px; margin-top: 15px;">
+                <table class="data-table" id="table-nodes">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>X (m)</th>
+                      <th>Y (m)</th>
+                      <th>Z (m)</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Injected dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tab content: Members -->
+            <div class="card frame-tab-content" id="panel-tab-members" style="display: none;">
+              <h3>Member Configuration</h3>
+              <p class="section-desc">Connect nodes to define 3D structural elements.</p>
+              
+              <div class="input-grid">
+                <div class="input-group">
+                  <label for="member-input-id">Member ID</label>
+                  <input type="text" id="member-input-id" placeholder="e.g. M1" class="form-control">
+                </div>
+                <div class="input-group">
+                  <label for="member-input-start">Start Node</label>
+                  <select id="member-input-start" class="form-control"></select>
+                </div>
+                <div class="input-group">
+                  <label for="member-input-end">End Node</label>
+                  <select id="member-input-end" class="form-control"></select>
+                </div>
+                <div class="input-group">
+                  <label for="member-input-section">Section Profile</label>
+                  <select id="member-input-section" class="form-control">
+                    <option value="Default">Default (A=100cm², I=10000cm⁴)</option>
+                    <!-- Injected dynamically from Registry -->
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label for="member-input-beta">Beta Angle (°)</label>
+                  <input type="number" id="member-input-beta" value="0.0" step="5" class="form-control">
+                </div>
+              </div>
+
+              <!-- Moment Releases Toggle -->
+              <div style="margin-top: 12px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+                <label style="font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; display: block;">End Connection Releases</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <label class="switch-label" style="font-size: 0.85rem;">
+                    <span>Pinned Start Node (Mz Release)</span>
+                    <input type="checkbox" id="member-release-start-mz">
+                  </label>
+                  <label class="switch-label" style="font-size: 0.85rem;">
+                    <span>Pinned End Node (Mz Release)</span>
+                    <input type="checkbox" id="member-release-end-mz">
+                  </label>
+                </div>
+              </div>
+              
+              <button class="btn btn-primary" id="btn-add-member" style="width: 100%; margin-top: 15px;">Add / Update Member</button>
+              
+              <div class="table-responsive" style="max-height: 180px; margin-top: 15px;">
+                <table class="data-table" id="table-members">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Start</th>
+                      <th>End</th>
+                      <th>Section</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Injected dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tab content: Supports -->
+            <div class="card frame-tab-content" id="panel-tab-supports" style="display: none;">
+              <h3>Support Restraints</h3>
+              <p class="section-desc">Apply boundary conditions at structural nodes.</p>
+              
+              <div class="input-group">
+                <label for="support-input-node">Target Node</label>
+                <select id="support-input-node" class="form-control"></select>
+              </div>
+
+              <div style="margin-top: 12px;">
+                <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 8px;">Degrees of Freedom Restrained</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <label class="switch-label"><span>DX (Lateral X)</span><input type="checkbox" id="support-dof-dx" checked></label>
+                  <label class="switch-label"><span>DY (Vertical Y)</span><input type="checkbox" id="support-dof-dy" checked></label>
+                  <label class="switch-label"><span>DZ (Lateral Z)</span><input type="checkbox" id="support-dof-dz" checked></label>
+                  <label class="switch-label"><span>RX (Torsion X)</span><input type="checkbox" id="support-dof-rx"></label>
+                  <label class="switch-label"><span>RY (Bending Y)</span><input type="checkbox" id="support-dof-ry"></label>
+                  <label class="switch-label"><span>RZ (Bending Z)</span><input type="checkbox" id="support-dof-rz"></label>
+                </div>
+              </div>
+
+              <div class="input-group" style="margin-top: 12px;">
+                <label for="support-presets">Restraint Presets</label>
+                <select id="support-presets" class="form-control">
+                  <option value="pinned">Pinned (DX, DY, DZ)</option>
+                  <option value="fixed">Fixed (All DOFs Fixed)</option>
+                  <option value="roller-y">Roller (DY only)</option>
+                  <option value="custom">Custom (Select checkboxes)</option>
+                </select>
+              </div>
+              
+              <button class="btn btn-primary" id="btn-add-support" style="width: 100%; margin-top: 15px;">Assign Support</button>
+              
+              <div class="table-responsive" style="max-height: 180px; margin-top: 15px;">
+                <table class="data-table" id="table-supports">
+                  <thead>
+                    <tr>
+                      <th>Node</th>
+                      <th>Restraints</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Injected dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tab content: Loads -->
+            <div class="card frame-tab-content" id="panel-tab-loads" style="display: none;">
+              <h3>Load Placement</h3>
+              <p class="section-desc">Define structural forces applied to the frame.</p>
+              
+              <div class="input-grid">
+                <div class="input-group">
+                  <label for="load-input-target">Target Type</label>
+                  <select id="load-input-target" class="form-control">
+                    <option value="node">Nodal Load</option>
+                    <option value="member">Member Load</option>
+                  </select>
+                </div>
+                <div class="input-group" id="load-group-node">
+                  <label for="load-input-node">Target Node</label>
+                  <select id="load-input-node" class="form-control"></select>
+                </div>
+                <div class="input-group" id="load-group-member" style="display: none;">
+                  <label for="load-input-member">Target Member</label>
+                  <select id="load-input-member" class="form-control"></select>
+                </div>
+                <div class="input-group">
+                  <label for="load-input-type">Load Profile</label>
+                  <select id="load-input-type" class="form-control">
+                    <option value="Point">Concentrated Force</option>
+                    <option value="UDL">Distributed Load (UDL)</option>
+                    <option value="Trapezoidal">Trapezoidal Load</option>
+                  </select>
+                </div>
+                <div class="input-group">
+                  <label for="load-input-direction">Direction</label>
+                  <select id="load-input-direction" class="form-control">
+                    <option value="FY">Global FY (Vertical)</option>
+                    <option value="FX">Global FX (Horizontal)</option>
+                    <option value="FZ">Global FZ (Lateral)</option>
+                    <option value="MZ">Global MZ (Moment)</option>
+                    <option value="Fy">Local Fy (Member Y)</option>
+                    <option value="Fx">Local Fx (Member X)</option>
+                  </select>
+                </div>
+                <div class="input-group" id="load-group-magnitude">
+                  <label for="load-input-mag" id="lbl-load-mag">Magnitude (kN or kNm)</label>
+                  <input type="number" id="load-input-mag" value="-10.0" step="1.0" class="form-control">
+                </div>
+                <div class="input-group" id="load-group-magnitude2" style="display: none;">
+                  <label for="load-input-mag2">End Mag (w2) (kN/m)</label>
+                  <input type="number" id="load-input-mag2" value="-10.0" step="1.0" class="form-control">
+                </div>
+                <div class="input-group" id="load-group-offset" style="display: none;">
+                  <label for="load-input-offset">Start Offset (x1) (m)</label>
+                  <input type="number" id="load-input-offset" value="0.0" step="0.5" class="form-control">
+                </div>
+                <div class="input-group" id="load-group-offset2" style="display: none;">
+                  <label for="load-input-offset2">End Offset (x2) (m)</label>
+                  <input type="number" id="load-input-offset2" value="2.0" step="0.5" class="form-control">
+                </div>
+              </div>
+              
+              <button class="btn btn-primary" id="btn-add-load" style="width: 100%; margin-top: 15px;">Add Load</button>
+              
+              <div class="table-responsive" style="max-height: 180px; margin-top: 15px;">
+                <table class="data-table" id="table-loads">
+                  <thead>
+                    <tr>
+                      <th>Target</th>
+                      <th>Type</th>
+                      <th>Dir</th>
+                      <th>Value</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Injected dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="card" style="margin-top: 15px;">
+              <button class="btn btn-primary" id="btn-solve-frame" style="width: 100%; margin-bottom: 8px;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right: 4px;"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round"/></svg>
+                Solve Frame Analysis
+              </button>
+              <button class="btn btn-secondary" id="btn-open-frame-report" style="width: 100%;" disabled>
+                Open Analysis Report
+              </button>
+            </div>
+            
+          </section>
+
+          <!-- Right Viewport and Results Panel -->
+          <section class="results-panel">
+            
+            <!-- WebGL 3D Viewport -->
+            <div class="card" style="position: relative; height: 450px; overflow: hidden; padding: 0;">
+              <div id="frame-canvas-container" style="width: 100%; height: 100%; cursor: grab; background-color: var(--bg-body);"></div>
+              
+              <!-- Diagram Selector Overlay -->
+              <div style="position: absolute; top: 12px; left: 12px; background: rgba(30,30,40,0.85); backdrop-filter: blur(4px); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px; z-index: 10;">
+                <label style="font-weight: 600; font-size: 0.75rem; color: #fff;">Display Diagram Layer</label>
+                <select id="diagram-layer-selector" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px; background-color: var(--bg-card); color: var(--text-primary); border-color: var(--border-color);">
+                  <option value="none">Undeflected Shape</option>
+                  <option value="deflection">Deflection Shape</option>
+                  <option value="moment_Z">Bending Moment (Mz)</option>
+                  <option value="shear_Y">Shear Force (Vy)</option>
+                  <option value="axial">Axial Force (Fx)</option>
+                </select>
+                <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px;">
+                  <label style="font-size: 0.7rem; color: #ccc; display: flex; align-items: center; gap: 4px;">
+                    <input type="checkbox" id="toggle-layer-loads" checked> Loads
+                  </label>
+                  <label style="font-size: 0.7rem; color: #ccc; display: flex; align-items: center; gap: 4px;">
+                    <input type="checkbox" id="toggle-layer-reactions" checked> Reactions
+                  </label>
+                </div>
+              </div>
+
+              <!-- View Controls -->
+              <div style="position: absolute; bottom: 12px; right: 12px; display: flex; gap: 6px; z-index: 10;">
+                <button class="btn btn-secondary" id="btn-view-3d" style="font-size: 0.75rem; padding: 4px 8px;">3D View</button>
+                <button class="btn btn-secondary" id="btn-view-xy" style="font-size: 0.75rem; padding: 4px 8px;">XY Plane</button>
+                <button class="btn btn-secondary" id="btn-view-xz" style="font-size: 0.75rem; padding: 4px 8px;">XZ Plane</button>
+              </div>
+            </div>
+
+            <!-- Analysis Outputs Tabs -->
+            <div class="card" style="margin-top: 15px;">
+              <div style="display: flex; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px; gap: 15px;">
+                <button class="btn btn-tab active" id="btn-tab-res-displacements" style="background: none; border: none; padding: 0 4px 4px; font-weight: 600; color: var(--text-primary); cursor: pointer;">Nodal Displacements</button>
+                <button class="btn btn-tab" id="btn-tab-res-reactions" style="background: none; border: none; padding: 0 4px 4px; font-weight: 600; color: var(--text-secondary); cursor: pointer;">Support Reactions</button>
+              </div>
+
+              <!-- Displacements table -->
+              <div id="panel-res-displacements" class="res-tab-content">
+                <div class="table-responsive">
+                  <table class="data-table" id="table-res-displacements">
+                    <thead>
+                      <tr>
+                        <th>Node</th>
+                        <th>DX (mm)</th>
+                        <th>DY (mm)</th>
+                        <th>DZ (mm)</th>
+                        <th>RX (rad)</th>
+                        <th>RY (rad)</th>
+                        <th>RZ (rad)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-secondary);">No displacements resolved. Click "Solve Frame Analysis".</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Reactions table -->
+              <div id="panel-res-reactions" class="res-tab-content" style="display: none;">
+                <div class="table-responsive">
+                  <table class="data-table" id="table-res-reactions">
+                    <thead>
+                      <tr>
+                        <th>Node</th>
+                        <th>FX (kN)</th>
+                        <th>FY (kN)</th>
+                        <th>FZ (kN)</th>
+                        <th>MX (kNm)</th>
+                        <th>MY (kNm)</th>
+                        <th>MZ (kNm)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-secondary);">No support reactions resolved. Click "Solve Frame Analysis".</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </section>
+
+        </div>
+      </div>
     </main>
   </div>
 
@@ -1029,10 +1397,16 @@
 
 
   <!-- Scripts with cache busters -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="js/section-properties/section-properties.js?v=5.5"></script>
   <script src="js/section-properties/canvas.js?v=5.5"></script>
   <script src="js/app.js?v=5.5"></script>
   <script src="js/frame-analysis/beam-analysis.js?v=5.5"></script>
   <script src="js/frame-analysis/report-generator.js?v=5.5"></script>
+  <script src="js/frame-analysis/model.js?v=5.5"></script>
+  <script src="js/frame-analysis/canvas.js?v=5.5"></script>
+  <script src="js/frame-analysis/ui.js?v=5.5"></script>
+  <script src="js/frame-analysis/api.js?v=5.5"></script>
 </body>
 </html>
