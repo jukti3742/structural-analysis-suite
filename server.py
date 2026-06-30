@@ -4,13 +4,16 @@ import json
 import traceback
 import os
 
-from beam_solver import analyze_beam
+from backend.solver.engine import analyze_beam
 
 # Render and Railway inject a dynamic PORT env variable. 
 # We default to 8000 for local development.
 PORT = int(os.environ.get("PORT", 8000))
 
 class NoCacheHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        directory = os.path.join(os.path.dirname(__file__), 'frontend')
+        super().__init__(*args, directory=directory, **kwargs)
     def end_headers(self):
         # Force browser to always fetch fresh copies of HTML/CSS/JS files
         self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
