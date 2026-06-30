@@ -113,6 +113,15 @@
         document.querySelectorAll('.list-tab-content').forEach(c => c.style.display = 'none');
         const listName = subtab.id.replace('subtab-', '');
         document.getElementById(`list-container-${listName}`).style.display = 'block';
+
+        // Update list title dynamically
+        const titleEl = document.getElementById('active-elements-title');
+        if (titleEl) {
+          if (listName === 'nodes') titleEl.innerText = 'Node Coordinate Table';
+          else if (listName === 'members') titleEl.innerText = 'Beam Connection Table';
+          else if (listName === 'supports') titleEl.innerText = 'Support Configuration Table';
+          else if (listName === 'loads') titleEl.innerText = 'Load Configuration Table';
+        }
       });
     });
 
@@ -317,6 +326,72 @@
 
     // --- Open Report Trigger ---
     document.getElementById('btn-open-frame-report').addEventListener('click', openFrameReport);
+
+    // --- Inline coordinate editing for Node table ---
+    const tableNodes = document.getElementById('table-nodes');
+    if (tableNodes) {
+      tableNodes.addEventListener('keydown', (e) => {
+        if (e.target.classList.contains('editable-coord') && e.key === 'Enter') {
+          e.preventDefault();
+          e.target.blur();
+        }
+      });
+
+      tableNodes.addEventListener('blur', (e) => {
+        if (e.target.classList.contains('editable-coord')) {
+          const nodeId = e.target.getAttribute('data-node-id');
+          const coord = e.target.getAttribute('data-coord');
+          const originalVal = parseFloat(e.target.getAttribute('data-original-val'));
+          const newVal = parseFloat(e.target.innerText.trim());
+
+          if (isNaN(newVal)) {
+            e.target.innerText = originalVal.toFixed(2);
+            showToast('Invalid numeric coordinate value.');
+            return;
+          }
+
+          // If coordinate hasn't changed, do nothing
+          if (Math.abs(newVal - originalVal) < 1e-9) {
+            e.target.innerText = originalVal.toFixed(2);
+            return;
+          }
+
+          // Update coordinate in model
+          window.FrameModel.nodes[nodeId][coord] = newVal;
+
+          // Invalidate previous analysis results
+          let clearedResults = false;
+          if (window.FrameModel.results) {
+            window.FrameModel.results = null;
+            clearedResults = true;
+            
+            // Disable report button
+            document.getElementById('btn-open-frame-report').setAttribute('disabled', 'true');
+            
+            // Clear results tables
+            const tbodyDisp = document.querySelector('#table-res-displacements tbody');
+            const tbodyReact = document.querySelector('#table-res-reactions tbody');
+            if (tbodyDisp) {
+              tbodyDisp.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No displacements resolved. Click "Solve Frame Analysis".</td></tr>`;
+            }
+            if (tbodyReact) {
+              tbodyReact.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No support reactions resolved. Click "Solve Frame Analysis".</td></tr>`;
+            }
+          }
+
+          if (clearedResults) {
+            showToast(`Warning: Node ${nodeId} ${coord.toUpperCase()} coordinate updated to ${newVal.toFixed(2)}m. Previous analysis results cleared.`);
+          } else {
+            showToast(`Node ${nodeId} ${coord.toUpperCase()} coordinate updated to ${newVal.toFixed(2)}m.`);
+          }
+
+          // Refresh tables & views
+          refreshAllDropdowns();
+          updateTablesDisplay();
+          window.FrameCanvas.render();
+        }
+      }, true);
+    }
   }
 
   function toggleMemberLoadFields() {
@@ -386,10 +461,10 @@
     } else {
       tbodyNodes.innerHTML = nodes.map(n => `
         <tr>
-          <td>${n.id}</td>
-          <td>${n.x.toFixed(2)}</td>
-          <td>${n.y.toFixed(2)}</td>
-          <td>${n.z.toFixed(2)}</td>
+          <td><strong>${n.id}</strong></td>
+          <td contenteditable="true" class="editable-coord" data-node-id="${n.id}" data-coord="x" data-original-val="${n.x}">${n.x.toFixed(2)}</td>
+          <td contenteditable="true" class="editable-coord" data-node-id="${n.id}" data-coord="y" data-original-val="${n.y}">${n.y.toFixed(2)}</td>
+          <td contenteditable="true" class="editable-coord" data-node-id="${n.id}" data-coord="z" data-original-val="${n.z}">${n.z.toFixed(2)}</td>
           <td>
             <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteNode('${n.id}'); window.initFrameAnalysisView();">Delete</button>
           </td>
