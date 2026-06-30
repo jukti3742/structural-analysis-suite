@@ -5,6 +5,7 @@ import traceback
 import os
 
 from backend.solver.engine import analyze_beam
+from backend.solver.frame_solver import analyze_frame
 
 # Render and Railway inject a dynamic PORT env variable. 
 # We default to 8000 for local development.
@@ -31,6 +32,33 @@ class NoCacheHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                 
                 # Solve using the dedicated backend analysis module
                 response_data = analyze_beam(data)
+                
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
+                self.end_headers()
+                self.wfile.write(json.dumps(response_data).encode('utf-8'))
+                
+            except Exception as e:
+                traceback.print_exc()
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "status": "error",
+                    "message": str(e)
+                }).encode('utf-8'))
+        elif self.path == '/api/analyze-frame':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                
+                # Solve using the PyNite frame solver
+                response_data = analyze_frame(data)
                 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
