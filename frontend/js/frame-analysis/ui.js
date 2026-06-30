@@ -102,6 +102,20 @@
 
     document.getElementById('load-input-type').addEventListener('change', toggleMemberLoadFields);
 
+    // Active Model Lists Subtab switching
+    document.querySelectorAll('.btn-subtab').forEach(subtab => {
+      subtab.addEventListener('click', () => {
+        document.querySelectorAll('.btn-subtab').forEach(s => {
+          s.classList.remove('active');
+        });
+        subtab.classList.add('active');
+
+        document.querySelectorAll('.list-tab-content').forEach(c => c.style.display = 'none');
+        const listName = subtab.id.replace('subtab-', '');
+        document.getElementById(`list-container-${listName}`).style.display = 'block';
+      });
+    });
+
     // Results Tab switching
     document.getElementById('btn-tab-res-displacements').addEventListener('click', () => {
       document.getElementById('btn-tab-res-displacements').classList.add('active');

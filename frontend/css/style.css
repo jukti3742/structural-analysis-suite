@@ -1464,5 +1464,60 @@ input:checked + .switch-slider:before {
   transform: scale(1.1);
 }
 
+/* 3D Frame Workspace Grid Layout */
+.frame-workspace-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 20px;
+  height: calc(100vh - 120px);
+  min-height: 580px;
+  max-height: 850px;
+  overflow: hidden;
+}
+.frame-left-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.frame-right-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Active Model Lists Subtabs styles */
+.btn-subtab {
+  padding: 4px 10px;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.btn-subtab:hover {
+  color: var(--text-primary);
+  background-color: var(--border-color);
+}
+.btn-subtab.active {
+  background-color: var(--border-color);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+#frame-list-tables-container {
+  scrollbar-width: thin;
+}
+#frame-list-tables-container::-webkit-scrollbar {
+  width: 6px;
+}
+#frame-list-tables-container::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+}
+
+
 
 
