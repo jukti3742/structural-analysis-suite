@@ -21,6 +21,12 @@
       activeSelectionTool = toolName;
       this.activeSelectionTool = toolName;
       
+      // Update viewport card cursor class
+      const viewportCard = document.getElementById('frame-viewport-card');
+      if (viewportCard) {
+        viewportCard.className = `card cursor-select-${toolName}`;
+      }
+      
       // Clear tooltips on switch
       const tooltip = document.getElementById('frame-viewport-tooltip');
       if (tooltip) tooltip.style.display = 'none';
