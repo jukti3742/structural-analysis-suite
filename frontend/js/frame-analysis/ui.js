@@ -43,9 +43,11 @@
         window.FrameCanvas.setSelectionTool(toolName);
         
         // Match bottom subtabs automatically when switching tools for better UX
-        const subtab = document.getElementById(`subtab-${toolName === 'member' ? 'members' : (toolName + 's')}`);
-        if (subtab && !subtab.classList.contains('active')) {
-          subtab.click();
+        if (toolName !== 'pan') {
+          const subtab = document.getElementById(`subtab-${toolName === 'member' ? 'members' : (toolName + 's')}`);
+          if (subtab && !subtab.classList.contains('active')) {
+            subtab.click();
+          }
         }
       });
     });

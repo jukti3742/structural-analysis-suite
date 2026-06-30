@@ -1038,6 +1038,12 @@
 
               <!-- Selection Toolbar (floating right-center in viewport) -->
               <div style="position: absolute; top: 50%; transform: translateY(-50%); right: 12px; background: rgba(30, 30, 40, 0.85); backdrop-filter: blur(4px); padding: 8px 6px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px; z-index: 10;">
+                <button class="btn btn-secondary btn-select-tool" id="tool-select-pan" title="Pan View" style="padding: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">
+                  <!-- Hand/Pan Icon -->
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path d="M12 11V3.5a1.5 1.5 0 00-3 0V12m0 0V5.5a1.5 1.5 0 00-3 0V12m0 0V7.5a1.5 1.5 0 00-3 0V12m0 0V9.5a1.5 1.5 0 00-3 0v4.5A7 7 0 0010 21h3a7 7 0 007-7v-3.5a1.5 1.5 0 00-3 0V12" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
                 <button class="btn btn-secondary btn-select-tool active-tab-btn" id="tool-select-node" title="Select Nodes" style="padding: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">
                   <!-- Node Icon (circle) -->
                   <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24" style="color: var(--text-primary);"><circle cx="12" cy="12" r="9"/></svg>

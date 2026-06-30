@@ -8,7 +8,15 @@
   let selectedMemberId = null;
   let selectedSupportId = null;
   let selectedLoadIndex = null;
-  let activeSelectionTool = 'node'; // 'node', 'member', 'support', 'load'
+  let activeSelectionTool = 'node'; // 'node', 'member', 'support', 'load', 'pan'
+
+  const CURSORS = {
+    pan: 'grab',
+    node: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f1c40f' stroke-width='2'><circle cx='12' cy='12' r='4' fill='%23f1c40f' fill-opacity='0.3'/><line x1='12' y1='2' x2='12' y2='22'/><line x1='2' y1='12' x2='22' y2='12'/></svg>\") 12 12, crosshair",
+    member: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f1c40f' stroke-width='2'><line x1='4' y1='20' x2='20' y2='4'/><line x1='12' y1='2' x2='12' y2='8'/><line x1='12' y1='16' x2='12' y2='22'/><line x1='2' y1='12' x2='8' y2='12'/><line x1='16' y1='12' x2='22' y2='12'/></svg>\") 12 12, crosshair",
+    support: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f1c40f' stroke-width='2'><polygon points='12,6 18,17 6,17' fill='%23f1c40f' fill-opacity='0.3'/><line x1='12' y1='2' x2='12' y2='22'/><line x1='2' y1='12' x2='22' y2='12'/></svg>\") 12 12, crosshair",
+    load: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f1c40f' stroke-width='2'><path d='M12,4 L12,20 M7,15 L12,20 L17,15' stroke-linecap='round' stroke-linejoin='round'/><line x1='12' y1='2' x2='12' y2='22'/><line x1='2' y1='12' x2='22' y2='12'/></svg>\") 12 12, crosshair"
+  };
 
   const FrameCanvas = {
     selectedNodeId: null,
@@ -21,10 +29,27 @@
       activeSelectionTool = toolName;
       this.activeSelectionTool = toolName;
       
-      // Update viewport card cursor class
-      const viewportCard = document.getElementById('frame-viewport-card');
-      if (viewportCard) {
-        viewportCard.className = `card cursor-select-${toolName}`;
+      // Update OrbitControls mouse bindings for Left click pan vs rotate
+      if (controls) {
+        if (toolName === 'pan') {
+          controls.mouseButtons = {
+            LEFT: THREE.MOUSE.PAN,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.ROTATE
+          };
+        } else {
+          controls.mouseButtons = {
+            LEFT: THREE.MOUSE.ROTATE,
+            MIDDLE: THREE.MOUSE.DOLLY,
+            RIGHT: THREE.MOUSE.PAN
+          };
+        }
+      }
+
+      // Update viewport cursor style immediately
+      const canvasEl = container ? container.querySelector('canvas') : null;
+      if (canvasEl) {
+        canvasEl.style.cursor = CURSORS[toolName] || 'grab';
       }
       
       // Clear tooltips on switch
@@ -139,10 +164,21 @@
       container.addEventListener('pointerdown', (e) => {
         this.pointerDownPos.x = e.clientX;
         this.pointerDownPos.y = e.clientY;
+        const canvasEl = container.querySelector('canvas');
+        if (canvasEl) {
+          canvasEl.style.cursor = 'grabbing';
+        }
       });
       container.addEventListener('pointerup', (e) => {
         const dx = Math.abs(e.clientX - this.pointerDownPos.x);
         const dy = Math.abs(e.clientY - this.pointerDownPos.y);
+        
+        // Restore cursor based on activeSelectionTool
+        const canvasEl = container.querySelector('canvas');
+        if (canvasEl) {
+          canvasEl.style.cursor = CURSORS[activeSelectionTool] || 'grab';
+        }
+
         if (dx > 3 || dy > 3) return; // Dragged camera
         
         const rect = container.getBoundingClientRect();
@@ -215,6 +251,7 @@
         if (!tooltip) return;
 
         let hoverContent = '';
+        let hasHitSelectable = false;
 
         if (activeSelectionTool === 'node') {
           const nodeMeshes = objectsGroup.children.filter(child => child.userData && child.userData.nodeId);
@@ -229,6 +266,7 @@
                 <div>Y: ${node.y.toFixed(3)} m</div>
                 <div>Z: ${node.z.toFixed(3)} m</div>
               `;
+              hasHitSelectable = true;
             }
           }
         } else if (activeSelectionTool === 'member') {
@@ -245,7 +283,51 @@
                 <div>End Node: ${member.endNode}</div>
                 <div>Section: ${member.sectionName}</div>
               `;
+              hasHitSelectable = true;
             }
+          }
+        } else if (activeSelectionTool === 'support') {
+          const supportMeshes = objectsGroup.children.filter(child => child.userData && child.userData.supportNodeId);
+          const intersects = raycaster.intersectObjects(supportMeshes);
+          if (intersects.length > 0) {
+            hasHitSelectable = true;
+          }
+        } else if (activeSelectionTool === 'load') {
+          const loadIndexable = objectsGroup.children.filter(child => {
+            let hasLoadIdx = child.userData && child.userData.loadIndex !== undefined;
+            if (!hasLoadIdx && child.children) {
+              hasLoadIdx = child.children.some(c => c.userData && c.userData.loadIndex !== undefined);
+            }
+            return hasLoadIdx;
+          });
+          const intersects = raycaster.intersectObjects(loadIndexable, true);
+          let foundLoadIndex = null;
+          for (const hit of intersects) {
+            let obj = hit.object;
+            while (obj) {
+              if (obj.userData && obj.userData.loadIndex !== undefined) {
+                foundLoadIndex = obj.userData.loadIndex;
+                break;
+              }
+              obj = obj.parent;
+            }
+            if (foundLoadIndex !== null) break;
+          }
+          if (foundLoadIndex !== null) {
+            hasHitSelectable = true;
+          }
+        }
+
+        // Set cursor style based on hits and active tool
+        const canvasEl = container.querySelector('canvas');
+        if (canvasEl) {
+          if (activeSelectionTool === 'pan') {
+            canvasEl.style.cursor = CURSORS.pan;
+          } else if (hasHitSelectable) {
+            canvasEl.style.cursor = CURSORS[activeSelectionTool];
+          } else {
+            // Intelligent fallback: if not hovering over selectable target, show hand cursor
+            canvasEl.style.cursor = CURSORS.pan;
           }
         }
 
