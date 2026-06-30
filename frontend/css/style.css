@@ -1497,6 +1497,14 @@ input:checked + .switch-slider:before {
   font-size: 0.72rem !important;
 }
 
+/* Prevent inputs from overflowing flex rows */
+.frame-right-panel input,
+.frame-right-panel select {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
 /* Active Model Lists Subtabs styles */
 .btn-subtab {
   padding: 4px 10px;
