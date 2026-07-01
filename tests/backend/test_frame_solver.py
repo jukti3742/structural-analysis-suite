@@ -130,7 +130,62 @@ def test_continuous_beam():
     assert abs(r3_fy - 18000.0) < 50.0
     assert abs(r1_fy + r2_fy + r3_fy - 96000.0) < 1.0
 
+def test_material_influence():
+    """
+    Test that varying material elastic properties affects the frame solver outputs.
+    A cantilever beam under point load at tip.
+    We compare Steel (E=200GPa) with Concrete (E=25GPa).
+    Concrete deflection should be exactly 8.0 times larger than steel deflection.
+    """
+    payload_base = {
+        "nodes": [
+            {"id": "N1", "x": 0.0, "y": 0.0, "z": 0.0},
+            {"id": "N2", "x": 0.0, "y": 3.0, "z": 0.0}
+        ],
+        "supports": [
+            {"nodeId": "N1", "restraints": [True, True, True, True, True, True]}
+        ],
+        "loads": [
+            {"type": "NodalLoad", "nodeId": "N2", "direction": "FX", "force": 10000.0}
+        ]
+    }
+
+    # Steel payload
+    payload_steel = dict(payload_base)
+    payload_steel["members"] = [{
+        "id": "M1",
+        "startNode": "N1",
+        "endNode": "N2",
+        "properties": {"E": 2.0e11, "poisson": 0.3, "density": 7850, "A": 1e-2, "Ixx": 1e-4, "Iyy": 1e-5, "J": 2e-5}
+    }]
+
+    # Concrete payload
+    payload_concrete = dict(payload_base)
+    payload_concrete["members"] = [{
+        "id": "M1",
+        "startNode": "N1",
+        "endNode": "N2",
+        "properties": {"E": 2.5e10, "poisson": 0.2, "density": 2500, "A": 1e-2, "Ixx": 1e-4, "Iyy": 1e-5, "J": 2e-5}
+    }]
+
+    res_steel = analyze_frame(payload_steel)
+    res_concrete = analyze_frame(payload_concrete)
+
+    assert res_steel["status"] == "success"
+    assert res_concrete["status"] == "success"
+
+    disp_steel = {d["nodeId"]: d for d in res_steel["displacements"]}
+    disp_concrete = {d["nodeId"]: d for d in res_concrete["displacements"]}
+
+    dx_steel = disp_steel["N2"]["DX"]
+    dx_concrete = disp_concrete["N2"]["DX"]
+
+    # Verify that Concrete deflection is exactly 8 times larger (ratio 8.0)
+    ratio = dx_concrete / dx_steel
+    assert abs(ratio - 8.0) < 1e-2
+
 if __name__ == "__main__":
     test_portal_frame_lateral()
     test_continuous_beam()
+    test_material_influence()
     print("All backend frame solver unit tests passed successfully!")

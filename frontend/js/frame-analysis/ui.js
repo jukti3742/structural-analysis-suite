@@ -575,18 +575,61 @@
     if (members.length === 0) {
       tbodyMembers.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">No members defined.</td></tr>`;
     } else {
-      tbodyMembers.innerHTML = members.map(m => `
-        <tr>
-          <td>${m.id}</td>
-          <td>${m.startNode}</td>
-          <td>${m.endNode}</td>
-          <td>${m.sectionName}</td>
-          <td>${m.materialName || 'Steel – E250'}</td>
-          <td>
-            <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteMember('${m.id}'); window.initFrameAnalysisView();">Delete</button>
-          </td>
-        </tr>
-      `).join('');
+      tbodyMembers.innerHTML = members.map(m => {
+        const secName = m.sectionName;
+        let secSelect = `<select class="table-unit-select table-section-select" data-member-id="${m.id}" style="width: 100%; border: none; background: transparent; padding: 0; color: var(--text-primary); font-size: 0.75rem; cursor: pointer; outline: none; margin-left: -2px;">`;
+        secSelect += `<option value="Default" ${secName === 'Default' ? 'selected' : ''}>Default</option>`;
+        if (window.getActiveSectionProperties && window.getActiveSectionProperties()) {
+          secSelect += `<option value="Active" ${secName === 'Active' ? 'selected' : ''}>Active</option>`;
+        }
+        for (const name in window.SectionRegistry) {
+          secSelect += `<option value="${name}" ${secName === name ? 'selected' : ''}>${name}</option>`;
+        }
+        secSelect += `</select>`;
+
+        const matName = m.materialName || 'Steel – E250';
+        let matSelect = `<select class="table-unit-select table-material-select" data-member-id="${m.id}" style="width: 100%; border: none; background: transparent; padding: 0; color: var(--text-primary); font-size: 0.75rem; cursor: pointer; outline: none; margin-left: -2px;">`;
+        for (const name in window.MaterialDatabase) {
+          matSelect += `<option value="${name}" ${matName === name ? 'selected' : ''}>${name}</option>`;
+        }
+        matSelect += `</select>`;
+
+        return `
+          <tr>
+            <td>${m.id}</td>
+            <td>${m.startNode}</td>
+            <td>${m.endNode}</td>
+            <td>${secSelect}</td>
+            <td>${matSelect}</td>
+            <td>
+              <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteMember('${m.id}'); window.initFrameAnalysisView();">Delete</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Attach change listeners for table selects
+      tbodyMembers.querySelectorAll('.table-section-select').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          const mId = e.target.getAttribute('data-member-id');
+          if (window.FrameModel.members[mId]) {
+            window.FrameModel.members[mId].sectionName = e.target.value;
+            window.FrameModel.results = null; // Invalidate cache
+            window.FrameCanvas.render();
+          }
+        });
+      });
+
+      tbodyMembers.querySelectorAll('.table-material-select').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          const mId = e.target.getAttribute('data-member-id');
+          if (window.FrameModel.members[mId]) {
+            window.FrameModel.members[mId].materialName = e.target.value;
+            window.FrameModel.results = null; // Invalidate cache
+            window.FrameCanvas.render();
+          }
+        });
+      });
 
       // Attach selection synchronization listeners
       const rows = tbodyMembers.querySelectorAll('tr');
@@ -600,7 +643,7 @@
         }
 
         row.addEventListener('click', (e) => {
-          if (e.target.classList.contains('delete-btn')) return;
+          if (e.target.classList.contains('delete-btn') || e.target.classList.contains('table-unit-select')) return;
           const firstCell = row.querySelector('td');
           if (firstCell && window.FrameCanvas) {
             const memberId = firstCell.innerText.trim();
