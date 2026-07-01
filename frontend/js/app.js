@@ -152,6 +152,7 @@ async function loadSectionDatabase() {
     const response = await fetch('section-presets.json');
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     SECTION_DATABASE = await response.json();
+    window.SECTION_DATABASE = SECTION_DATABASE;
     
     // Bind navigation linkage dynamically based on JSON keys
     bindNavigationLinkage();

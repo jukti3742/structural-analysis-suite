@@ -498,7 +498,7 @@
     const memberOptions = members.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
     document.getElementById('load-input-member').innerHTML = memberOptions;
 
-    // 3. Populate Section Profiles drop-down from Registry
+    // 3. Populate Section Profiles drop-down from Registry & Database
     const sectionSel = document.getElementById('member-input-section');
     let sectionOptions = `<option value="Default">Default (A=100cm², I=10000cm⁴)</option>`;
     
@@ -507,10 +507,37 @@
       sectionOptions += `<option value="Active">Active Calculator Section</option>`;
     }
 
-    for (const name in window.SectionRegistry) {
-      sectionOptions += `<option value="${name}">${name}</option>`;
+    // Populate from SectionRegistry
+    if (Object.keys(window.SectionRegistry).length > 0) {
+      sectionOptions += `<optgroup label="Custom Created Sections">`;
+      for (const name in window.SectionRegistry) {
+        sectionOptions += `<option value="${name}">${name}</option>`;
+      }
+      sectionOptions += `</optgroup>`;
+    }
+
+    // Populate from SECTION_DATABASE
+    const db = window.SECTION_DATABASE;
+    if (db) {
+      for (const cat in db) {
+        for (const subcat in db[cat]) {
+          sectionOptions += `<optgroup label="${cat} - ${subcat}">`;
+          db[cat][subcat].forEach(profile => {
+            sectionOptions += `<option value="${profile.name}">${profile.name}</option>`;
+          });
+          sectionOptions += `</optgroup>`;
+        }
+      }
     }
     sectionSel.innerHTML = sectionOptions;
+    
+    // Pre-select IPE 200 by default if it was not set yet
+    if (sectionSel.value === 'Default') {
+      const hasIpe200 = sectionSel.querySelector('option[value="IPE 200"]');
+      if (hasIpe200) {
+        sectionSel.value = 'IPE 200';
+      }
+    }
 
     // 4. Populate Material Grade drop-down from MaterialDatabase
     const materialSel = document.getElementById('member-input-material');
@@ -585,8 +612,28 @@
         if (window.getActiveSectionProperties && window.getActiveSectionProperties()) {
           secSelect += `<option value="Active" ${secName === 'Active' ? 'selected' : ''}>Active</option>`;
         }
-        for (const name in window.SectionRegistry) {
-          secSelect += `<option value="${name}" ${secName === name ? 'selected' : ''}>${name}</option>`;
+        
+        // Custom created sections
+        if (Object.keys(window.SectionRegistry).length > 0) {
+          secSelect += `<optgroup label="Custom Created Sections">`;
+          for (const name in window.SectionRegistry) {
+            secSelect += `<option value="${name}" ${secName === name ? 'selected' : ''}>${name}</option>`;
+          }
+          secSelect += `</optgroup>`;
+        }
+
+        // Standard profiles from database
+        const db = window.SECTION_DATABASE;
+        if (db) {
+          for (const cat in db) {
+            for (const subcat in db[cat]) {
+              secSelect += `<optgroup label="${cat} - ${subcat}">`;
+              db[cat][subcat].forEach(profile => {
+                secSelect += `<option value="${profile.name}" ${secName === profile.name ? 'selected' : ''}>${profile.name}</option>`;
+              });
+              secSelect += `</optgroup>`;
+            }
+          }
         }
         secSelect += `</select>`;
 
@@ -823,9 +870,9 @@
     window.FrameModel.addNode('N4', 4.0, 0.0, 0.0);
 
     // Members
-    window.FrameModel.addMember('Col1', 'N1', 'N2', 'Default');
-    window.FrameModel.addMember('Beam', 'N2', 'N3', 'Default');
-    window.FrameModel.addMember('Col2', 'N4', 'N3', 'Default');
+    window.FrameModel.addMember('Col1', 'N1', 'N2', 'IPE 200', 'Steel – E250');
+    window.FrameModel.addMember('Beam', 'N2', 'N3', 'IPE 200', 'Steel – E250');
+    window.FrameModel.addMember('Col2', 'N4', 'N3', 'IPE 200', 'Steel – E250');
 
     // Supports
     window.FrameModel.addSupport('N1', [True, True, True, True, False, False]); // Stabilized

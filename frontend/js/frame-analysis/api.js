@@ -33,12 +33,46 @@
             J = activeProps.J || J;
             name = activeProps.name || name;
           }
-        } else if (window.SectionRegistry[m.sectionName]) {
+        } else if (window.SectionRegistry && window.SectionRegistry[m.sectionName]) {
           const regProps = window.SectionRegistry[m.sectionName];
           A = regProps.A || A;
           Ixx = regProps.Ixx || Ixx;
           Iyy = regProps.Iyy || Iyy;
           J = regProps.J || J;
+        } else {
+          // Check SECTION_DATABASE for standard rolled sections
+          const db = window.SECTION_DATABASE;
+          if (db) {
+            let foundProfile = null;
+            let foundCat = null;
+            for (const cat in db) {
+              for (const subcat in db[cat]) {
+                const profile = db[cat][subcat].find(p => p.name === m.sectionName);
+                if (profile) {
+                  foundProfile = profile;
+                  foundCat = cat;
+                  break;
+                }
+              }
+              if (foundProfile) break;
+            }
+            
+            if (foundProfile) {
+              let calculated = null;
+              if (foundCat === 'I-Section' && window.calculateISectionProperties) {
+                calculated = window.calculateISectionProperties(foundProfile, 'mm');
+              } else if (foundCat === 'Box-Section' && window.calculateBoxSectionProperties) {
+                calculated = window.calculateBoxSectionProperties(foundProfile, 'mm');
+              }
+              
+              if (calculated) {
+                A = calculated.A || A;
+                Ixx = calculated.Ixx || Ixx;
+                Iyy = calculated.Iyy || Iyy;
+                J = calculated.J || J;
+              }
+            }
+          }
         }
 
         // Resolve material properties from database (fallback to Steel - E250)
