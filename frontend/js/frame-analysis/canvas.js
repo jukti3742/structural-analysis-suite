@@ -12,10 +12,10 @@
 
   const CURSORS = {
     pan: 'grab',
-    node: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f1c40f' stroke-width='2'><circle cx='12' cy='12' r='4' fill='%23f1c40f' fill-opacity='0.3'/><line x1='12' y1='2' x2='12' y2='22'/><line x1='2' y1='12' x2='22' y2='12'/></svg>\") 12 12, crosshair",
-    member: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f1c40f' stroke-width='2'><line x1='4' y1='20' x2='20' y2='4'/><line x1='12' y1='2' x2='12' y2='8'/><line x1='12' y1='16' x2='12' y2='22'/><line x1='2' y1='12' x2='8' y2='12'/><line x1='16' y1='12' x2='22' y2='12'/></svg>\") 12 12, crosshair",
-    support: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f1c40f' stroke-width='2'><polygon points='12,6 18,17 6,17' fill='%23f1c40f' fill-opacity='0.3'/><line x1='12' y1='2' x2='12' y2='22'/><line x1='2' y1='12' x2='22' y2='12'/></svg>\") 12 12, crosshair",
-    load: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f1c40f' stroke-width='2'><path d='M12,4 L12,20 M7,15 L12,20 L17,15' stroke-linecap='round' stroke-linejoin='round'/><line x1='12' y1='2' x2='12' y2='22'/><line x1='2' y1='12' x2='22' y2='12'/></svg>\") 12 12, crosshair"
+    node: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28' fill='none'><circle cx='5' cy='5' r='4' fill='%23f1c40f' fill-opacity='0.4' stroke='black' stroke-width='1.5'/><path d='M5,5 L5,20 L9,16 L13,23 L15,22 L11,15 L15,15 Z' fill='white' stroke='black' stroke-width='1.5'/></svg>\") 5 5, crosshair",
+    member: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'><path d='M1,1 L1,18 L6,13 L10,21 L13,19 L9,12 L14,12 Z' fill='white' stroke='black' stroke-width='1.5'/></svg>\") 1 1, default",
+    support: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28' fill='none'><polygon points='5,2 1,9 9,9' fill='%23f1c40f' fill-opacity='0.4' stroke='black' stroke-width='1.5'/><path d='M5,5 L5,20 L9,16 L13,23 L15,22 L11,15 L15,15 Z' fill='white' stroke='black' stroke-width='1.5'/></svg>\") 5 5, crosshair",
+    load: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28' fill='none'><path d='M1,1 L1,18 L6,13 L10,21 L13,19 L9,12 L14,12 Z' fill='white' stroke='black' stroke-width='1.5'/><path d='M16,6 L16,18 M12,14 L16,19 L20,14' stroke='%23f1c40f' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>\") 1 1, crosshair"
   };
 
   const FrameCanvas = {
@@ -321,14 +321,7 @@
         // Set cursor style based on hits and active tool
         const canvasEl = container.querySelector('canvas');
         if (canvasEl) {
-          if (activeSelectionTool === 'pan') {
-            canvasEl.style.cursor = CURSORS.pan;
-          } else if (hasHitSelectable) {
-            canvasEl.style.cursor = CURSORS[activeSelectionTool];
-          } else {
-            // Intelligent fallback: if not hovering over selectable target, show hand cursor
-            canvasEl.style.cursor = CURSORS.pan;
-          }
+          canvasEl.style.cursor = CURSORS[activeSelectionTool] || 'default';
         }
 
         if (hoverContent) {
