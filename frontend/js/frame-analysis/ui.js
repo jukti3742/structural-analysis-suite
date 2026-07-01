@@ -243,10 +243,13 @@
       }
 
       const releases = {
-        Dxi: false, Dyi: false, Dzi: false, Rxi: false, Ryi: false,
-        Rzi: document.getElementById('member-release-start-mz').checked,
-        Dxj: false, Dyj: false, Dzj: false, Rxj: false, Ryj: false,
-        Rzj: document.getElementById('member-release-end-mz').checked
+        Dxi: false, Dyi: false, Dzi: false, Rxi: false, Ryi: false, Rzi: false,
+        Dxj: document.getElementById('member-release-fx').checked,
+        Dyj: document.getElementById('member-release-fy').checked,
+        Dzj: document.getElementById('member-release-fz').checked,
+        Rxj: document.getElementById('member-release-mx').checked,
+        Ryj: document.getElementById('member-release-my').checked,
+        Rzj: document.getElementById('member-release-mz').checked
       };
 
       window.FrameModel.addMember(id, start, end, section, material, beta, releases);

@@ -1190,40 +1190,70 @@
               <div class="frame-tab-content" id="panel-tab-members" style="display: none;">
                 <h3 style="font-size: 0.95rem; margin-bottom: 2px;">Add Beam</h3>
                 <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px;">Auto-generates Beam ID. Connect nodes:</p>
-                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                  <div class="input-group" style="flex: 1;">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Start Node</label>
-                    <select id="member-input-start" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;"></select>
+                <div style="display: flex; gap: 12px; margin-bottom: 10px; align-items: stretch;">
+                  <!-- Left Section (Node 1, Node 2 stacked) -->
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                    <div class="input-group">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 1 (Start)</label>
+                      <select id="member-input-start" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
+                    </div>
+                    <div class="input-group">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 2 (End)</label>
+                      <select id="member-input-end" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
+                    </div>
                   </div>
-                  <div class="input-group" style="flex: 1;">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">End Node</label>
-                    <select id="member-input-end" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;"></select>
+                  
+                  <!-- Vertical Divider -->
+                  <div style="width: 1px; background-color: var(--border-color); margin: 4px 0;"></div>
+                  
+                  <!-- Right Section (Material, Section, Beta stacked) -->
+                  <div style="flex: 1.2; display: flex; flex-direction: column; gap: 8px;">
+                    <div class="input-group">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Material Grade</label>
+                      <select id="member-input-material" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
+                    </div>
+                    <div class="input-group">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Section Profile</label>
+                      <select id="member-input-section" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;">
+                        <option value="Default">Default</option>
+                      </select>
+                    </div>
+                    <div class="input-group">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Beta Angle (°)</label>
+                      <input type="number" id="member-input-beta" value="0.0" step="5" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;">
+                    </div>
                   </div>
                 </div>
-                <div class="input-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
-                  <div class="input-group">
-                    <label style="font-size: 0.72rem;">Section Profile</label>
-                    <select id="member-input-section" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
-                      <option value="Default">Default (A=100cm², I=10000cm⁴)</option>
-                    </select>
+
+                <!-- Releases section -->
+                <div style="margin-bottom: 12px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                  <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">Releases</span>
+                  <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border-radius: 4px; padding: 6px 8px; border: 1px dashed var(--border-color);">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                      <input type="checkbox" id="member-release-fx" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
+                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Fx</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                      <input type="checkbox" id="member-release-fy" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
+                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Fy</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                      <input type="checkbox" id="member-release-fz" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
+                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Fz</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                      <input type="checkbox" id="member-release-mx" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
+                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Mx</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                      <input type="checkbox" id="member-release-my" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
+                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">My</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                      <input type="checkbox" id="member-release-mz" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
+                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Mz</span>
+                    </div>
                   </div>
-                  <div class="input-group">
-                    <label style="font-size: 0.72rem;">Material Grade</label>
-                    <select id="member-input-material" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
-                      <option value="Steel – E250">Steel – E250</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="input-grid" style="grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px;">
-                  <div class="input-group">
-                    <label style="font-size: 0.72rem;">Beta Orientation Angle (°)</label>
-                    <input type="number" id="member-input-beta" value="0.0" step="5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
-                  </div>
-                </div>
-                <!-- Connection releases -->
-                <div style="margin-bottom: 10px; border-top: 1px solid var(--border-color); padding-top: 8px; display: flex; flex-direction: column; gap: 6px;">
-                  <label class="switch-label" style="font-size: 0.72rem;"><span>Pinned Start Node (Mz Release)</span><input type="checkbox" id="member-release-start-mz"></label>
-                  <label class="switch-label" style="font-size: 0.72rem;"><span>Pinned End Node (Mz Release)</span><input type="checkbox" id="member-release-end-mz"></label>
                 </div>
                 <button class="btn btn-primary" id="btn-add-member" style="width: 100%; font-size: 0.75rem; padding: 6px 12px;">Add Member</button>
               </div>
