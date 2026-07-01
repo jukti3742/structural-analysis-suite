@@ -1629,6 +1629,26 @@ input:checked + .switch-slider:before {
   cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23f1c40f' stroke-width='2'><path d='M12,4 L12,20 M7,15 L12,20 L17,15' stroke-linecap='round' stroke-linejoin='round'/><line x1='12' y1='2' x2='12' y2='22'/><line x1='2' y1='12' x2='22' y2='12'/></svg>") 12 12, crosshair !important;
 }
 
+/* Table Unit Selectors Indentation and Borderless style */
+.table-unit-select {
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+  cursor: pointer !important;
+  font-family: inherit !important;
+  /* Indent/shift slightly left to align perfectly with the cell padding */
+  margin-left: -2px !important;
+  box-shadow: none !important;
+  -webkit-appearance: menulist !important;
+  -moz-appearance: menulist !important;
+  appearance: menulist !important;
+}
+
 
 
 
