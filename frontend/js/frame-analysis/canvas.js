@@ -47,6 +47,11 @@
       }
 
       // Update viewport cursor style immediately
+      const cardEl = document.getElementById('frame-viewport-card');
+      if (cardEl) {
+        cardEl.classList.remove('cursor-select-node', 'cursor-select-member', 'cursor-select-support', 'cursor-select-load', 'cursor-select-pan');
+        cardEl.classList.add(`cursor-select-${toolName}`);
+      }
       const canvasEl = container ? container.querySelector('canvas') : null;
       if (canvasEl) {
         canvasEl.style.cursor = CURSORS[toolName] || 'grab';
