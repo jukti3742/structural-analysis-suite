@@ -1154,18 +1154,17 @@
           <!-- Right Panel: Fixed Inputs (Top) + Scrollable Object List (Bottom) -->
           <aside class="frame-right-panel" style="display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden;">
             
-            <!-- Segmented Operation Selector -->
-            <div class="card" style="padding: 10px; flex-shrink: 0;">
-              <div class="frame-tabs" style="display: flex; gap: 6px;">
-                <button class="btn btn-secondary active-tab-btn" id="btn-tab-nodes" style="flex: 1; font-size: 0.8rem; padding: 6px 2px;">Nodes</button>
-                <button class="btn btn-secondary" id="btn-tab-members" style="flex: 1; font-size: 0.8rem; padding: 6px 2px;">Beams</button>
-                <button class="btn btn-secondary" id="btn-tab-supports" style="flex: 1; font-size: 0.8rem; padding: 6px 2px;">Supports</button>
-                <button class="btn btn-secondary" id="btn-tab-loads" style="flex: 1; font-size: 0.8rem; padding: 6px 2px;">Loads</button>
-              </div>
-            </div>
-
             <!-- Fixed Input Controls (Swapped dynamically) -->
-            <div class="card" style="flex-shrink: 0; padding: 15px;" id="frame-input-container">
+            <div class="card" style="flex-shrink: 0; padding: 12px; display: flex; flex-direction: column;" id="frame-input-container">
+              <h4 style="font-size: 0.85rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">Add Input</h4>
+              
+              <!-- Segmented Operation Selector -->
+              <div class="frame-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 12px;">
+                <span class="btn-subtab active" id="btn-tab-nodes" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Nodes</span>
+                <span class="btn-subtab" id="btn-tab-members" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Beams</span>
+                <span class="btn-subtab" id="btn-tab-supports" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Supports</span>
+                <span class="btn-subtab" id="btn-tab-loads" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Loads</span>
+              </div>
               
               <!-- Tab content: Nodes Input -->
               <div class="frame-tab-content" id="panel-tab-nodes">
@@ -1318,7 +1317,7 @@
               <h4 id="active-elements-title" style="font-size: 0.85rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">Properties / Information</h4>
               
               <!-- Object list subtabs to show either Nodes, Members, Supports, or Loads tables -->
-              <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">
+              <div class="properties-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">
                 <span class="btn-subtab active" id="subtab-nodes" style="font-size: 0.7rem; font-weight: 600; cursor: pointer; color: var(--text-primary);">Nodes</span>
                 <span class="btn-subtab" id="subtab-members" style="font-size: 0.7rem; font-weight: 600; cursor: pointer; color: var(--text-secondary);">Beams</span>
                 <span class="btn-subtab" id="subtab-supports" style="font-size: 0.7rem; font-weight: 600; cursor: pointer; color: var(--text-secondary);">Supports</span>

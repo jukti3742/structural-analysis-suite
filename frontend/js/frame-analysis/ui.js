@@ -68,11 +68,13 @@
     bindUnitChangeListener('node-unit-z', 'nodeZ');
     bindUnitChangeListener('load-unit-val', 'loadVal');
 
-    // Tab switching for inputs panel
-    document.querySelectorAll('.frame-tabs .btn').forEach(btn => {
+    // Tab switching for inputs panel (Add Input)
+    document.querySelectorAll('.frame-tabs .btn-subtab').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.frame-tabs .btn').forEach(b => b.classList.remove('active-tab-btn'));
-        btn.classList.add('active-tab-btn');
+        document.querySelectorAll('.frame-tabs .btn-subtab').forEach(b => {
+          b.classList.remove('active');
+        });
+        btn.classList.add('active');
         
         document.querySelectorAll('.frame-tab-content').forEach(p => p.style.display = 'none');
         const tabName = btn.id.replace('btn-tab-', '');
@@ -167,9 +169,9 @@
     document.getElementById('load-input-type').addEventListener('change', toggleMemberLoadFields);
 
     // Active Model Lists Subtab switching
-    document.querySelectorAll('.btn-subtab').forEach(subtab => {
+    document.querySelectorAll('.properties-tabs .btn-subtab').forEach(subtab => {
       subtab.addEventListener('click', () => {
-        document.querySelectorAll('.btn-subtab').forEach(s => {
+        document.querySelectorAll('.properties-tabs .btn-subtab').forEach(s => {
           s.classList.remove('active');
         });
         subtab.classList.add('active');
