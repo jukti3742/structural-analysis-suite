@@ -76,9 +76,17 @@
         });
         btn.classList.add('active');
         
+        // Swap inputs display
         document.querySelectorAll('.frame-tab-content').forEach(p => p.style.display = 'none');
         const tabName = btn.id.replace('btn-tab-', '');
         document.getElementById(`panel-tab-${tabName}`).style.display = 'block';
+
+        // Swap properties display (synchronized table selection)
+        document.querySelectorAll('.list-tab-content').forEach(c => c.style.display = 'none');
+        const listContainer = document.getElementById(`list-container-${tabName}`);
+        if (listContainer) {
+          listContainer.style.display = 'block';
+        }
       });
     });
 
@@ -90,11 +98,12 @@
         const toolName = btn.id.replace('tool-select-', '');
         window.FrameCanvas.setSelectionTool(toolName);
         
-        // Match bottom subtabs automatically when switching tools for better UX
+        // Match top subtabs automatically when switching tools for better UX
         if (toolName !== 'pan') {
-          const subtab = document.getElementById(`subtab-${toolName === 'member' ? 'members' : (toolName + 's')}`);
-          if (subtab && !subtab.classList.contains('active')) {
-            subtab.click();
+          const targetTabId = `btn-tab-${toolName === 'node' ? 'nodes' : (toolName === 'member' ? 'members' : (toolName === 'support' ? 'supports' : 'loads'))}`;
+          const tabEl = document.getElementById(targetTabId);
+          if (tabEl && !tabEl.classList.contains('active')) {
+            tabEl.click();
           }
         }
       });
@@ -168,19 +177,7 @@
 
     document.getElementById('load-input-type').addEventListener('change', toggleMemberLoadFields);
 
-    // Active Model Lists Subtab switching
-    document.querySelectorAll('.properties-tabs .btn-subtab').forEach(subtab => {
-      subtab.addEventListener('click', () => {
-        document.querySelectorAll('.properties-tabs .btn-subtab').forEach(s => {
-          s.classList.remove('active');
-        });
-        subtab.classList.add('active');
 
-        document.querySelectorAll('.list-tab-content').forEach(c => c.style.display = 'none');
-        const listName = subtab.id.replace('subtab-', '');
-        document.getElementById(`list-container-${listName}`).style.display = 'block';
-      });
-    });
 
     // Results Tab switching
     document.getElementById('btn-tab-res-displacements').addEventListener('click', () => {
@@ -947,9 +944,9 @@
     });
 
     if (targetRow) {
-      const subtabNodes = document.getElementById('subtab-nodes');
-      if (subtabNodes && !subtabNodes.classList.contains('active')) {
-        subtabNodes.click();
+      const tabNodes = document.getElementById('btn-tab-nodes');
+      if (tabNodes && !tabNodes.classList.contains('active')) {
+        tabNodes.click();
       }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
@@ -976,9 +973,9 @@
     });
 
     if (targetRow) {
-      const subtabMembers = document.getElementById('subtab-members');
-      if (subtabMembers && !subtabMembers.classList.contains('active')) {
-        subtabMembers.click();
+      const tabMembers = document.getElementById('btn-tab-members');
+      if (tabMembers && !tabMembers.classList.contains('active')) {
+        tabMembers.click();
       }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
@@ -1004,9 +1001,9 @@
     });
 
     if (targetRow) {
-      const subtabSupports = document.getElementById('subtab-supports');
-      if (subtabSupports && !subtabSupports.classList.contains('active')) {
-        subtabSupports.click();
+      const tabSupports = document.getElementById('btn-tab-supports');
+      if (tabSupports && !tabSupports.classList.contains('active')) {
+        tabSupports.click();
       }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
@@ -1028,9 +1025,9 @@
     });
 
     if (targetRow) {
-      const subtabLoads = document.getElementById('subtab-loads');
-      if (subtabLoads && !subtabLoads.classList.contains('active')) {
-        subtabLoads.click();
+      const tabLoads = document.getElementById('btn-tab-loads');
+      if (tabLoads && !tabLoads.classList.contains('active')) {
+        tabLoads.click();
       }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
