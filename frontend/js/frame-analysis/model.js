@@ -46,12 +46,13 @@
     },
 
     // --- Members ---
-    addMember: function(id, startNode, endNode, sectionName, beta = 0.0, releases = null) {
+    addMember: function(id, startNode, endNode, sectionName, materialName = 'Steel – E250', beta = 0.0, releases = null) {
       this.members[id] = {
         id,
         startNode,
         endNode,
         sectionName,
+        materialName,
         beta: float(beta),
         releases: releases || {
           Dxi: false, Dyi: false, Dzi: false, Rxi: false, Ryi: false, Rzi: false,

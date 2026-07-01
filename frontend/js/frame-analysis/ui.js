@@ -230,6 +230,7 @@
       const start = document.getElementById('member-input-start').value;
       const end = document.getElementById('member-input-end').value;
       const section = document.getElementById('member-input-section').value;
+      const material = document.getElementById('member-input-material').value;
       const beta = parseFloat(document.getElementById('member-input-beta').value) || 0.0;
 
       if (!start || !end) {
@@ -248,7 +249,7 @@
         Rzj: document.getElementById('member-release-end-mz').checked
       };
 
-      window.FrameModel.addMember(id, start, end, section, beta, releases);
+      window.FrameModel.addMember(id, start, end, section, material, beta, releases);
       showToast(`Beam ${id} added successfully.`);
       
       refreshAllDropdowns();
@@ -507,6 +508,16 @@
       sectionOptions += `<option value="${name}">${name}</option>`;
     }
     sectionSel.innerHTML = sectionOptions;
+
+    // 4. Populate Material Grade drop-down from MaterialDatabase
+    const materialSel = document.getElementById('member-input-material');
+    if (materialSel && window.MaterialDatabase) {
+      let materialOptions = '';
+      for (const name in window.MaterialDatabase) {
+        materialOptions += `<option value="${name}">${name}</option>`;
+      }
+      materialSel.innerHTML = materialOptions;
+    }
   }
 
   function updateTablesDisplay() {
@@ -562,7 +573,7 @@
     const tbodyMembers = document.querySelector('#table-members tbody');
     const members = window.FrameModel.getMemberList();
     if (members.length === 0) {
-      tbodyMembers.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">No members defined.</td></tr>`;
+      tbodyMembers.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">No members defined.</td></tr>`;
     } else {
       tbodyMembers.innerHTML = members.map(m => `
         <tr>
@@ -570,6 +581,7 @@
           <td>${m.startNode}</td>
           <td>${m.endNode}</td>
           <td>${m.sectionName}</td>
+          <td>${m.materialName || 'Steel – E250'}</td>
           <td>
             <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteMember('${m.id}'); window.initFrameAnalysisView();">Delete</button>
           </td>

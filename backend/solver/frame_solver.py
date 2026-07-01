@@ -36,7 +36,9 @@ def analyze_frame(data):
             props = m.get('properties', m)
             
             E = float(props.get('E', 200e9))
-            G = float(props.get('G', E / 2.6))  # Default Poisson's ratio approx 0.3 -> G = E/2.6
+            poisson = float(props.get('poisson', 0.3))
+            G = float(props.get('G', E / (2 * (1 + poisson))))
+            density = float(props.get('density', 7850))
             A = float(props.get('A', 1e-2))
             
             # Iz = major bending inertia (matches Ixx in properties catalog)
@@ -45,10 +47,10 @@ def analyze_frame(data):
             Iy = float(props.get('Iy', props.get('Iyy', 1e-5)))
             J = float(props.get('J', 2e-5))
             
-            mat_name = f"Mat_{m_id}"
+            mat_name = f"Mat_{m_id}_{props.get('materialName', 'Steel-E250').replace(' ', '_')}"
             sec_name = f"Sec_{m_id}"
             
-            model.add_material(mat_name, E, G, 0.3, 7850)
+            model.add_material(mat_name, E, G, poisson, density)
             model.add_section(sec_name, A, Iy, Iz, J)
             
             start_node = str(m['startNode'])

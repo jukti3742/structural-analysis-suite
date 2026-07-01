@@ -1200,7 +1200,7 @@
                     <select id="member-input-end" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;"></select>
                   </div>
                 </div>
-                <div class="input-grid" style="grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 10px;">
+                <div class="input-grid" style="grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
                   <div class="input-group">
                     <label style="font-size: 0.72rem;">Section Profile</label>
                     <select id="member-input-section" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
@@ -1208,7 +1208,15 @@
                     </select>
                   </div>
                   <div class="input-group">
-                    <label style="font-size: 0.72rem;">Beta (°)</label>
+                    <label style="font-size: 0.72rem;">Material Grade</label>
+                    <select id="member-input-material" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      <option value="Steel – E250">Steel – E250</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="input-grid" style="grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px;">
+                  <div class="input-group">
+                    <label style="font-size: 0.72rem;">Beta Orientation Angle (°)</label>
                     <input type="number" id="member-input-beta" value="0.0" step="5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
                   </div>
                 </div>
@@ -1364,7 +1372,7 @@
                 <div id="list-container-members" class="list-tab-content" style="display: none;">
                   <table class="data-table" id="table-members" style="font-size: 0.75rem;">
                     <thead>
-                      <tr><th>ID</th><th>Start</th><th>End</th><th>Section</th><th></th></tr>
+                      <tr><th>ID</th><th>Start</th><th>End</th><th>Section</th><th>Material</th><th></th></tr>
                     </thead>
                     <tbody></tbody>
                   </table>
@@ -1445,6 +1453,7 @@
   <script src="js/app.js?v=5.5"></script>
   <script src="js/frame-analysis/beam-analysis.js?v=5.5"></script>
   <script src="js/frame-analysis/report-generator.js?v=5.5"></script>
+  <script src="js/frame-analysis/materials.js?v=5.5"></script>
   <script src="js/frame-analysis/model.js?v=5.5"></script>
   <script src="js/frame-analysis/canvas.js?v=5.5"></script>
   <script src="js/frame-analysis/ui.js?v=5.5"></script>

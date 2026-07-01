@@ -41,6 +41,20 @@
           J = regProps.J || J;
         }
 
+        // Resolve material properties from database (fallback to Steel - E250)
+        let E = 2.0e11;
+        let poisson = 0.3;
+        let G = 7.69e10;
+        let density = 7850;
+        let matName = m.materialName || 'Steel – E250';
+        if (window.MaterialDatabase && window.MaterialDatabase[matName]) {
+          const mat = window.MaterialDatabase[matName];
+          E = mat.E;
+          poisson = mat.poisson;
+          G = mat.G;
+          density = mat.density;
+        }
+
         payload.members.push({
           id: m.id,
           startNode: m.startNode,
@@ -52,7 +66,12 @@
             A: A,
             Ixx: Ixx,
             Iyy: Iyy,
-            J: J
+            J: J,
+            materialName: matName,
+            E: E,
+            poisson: poisson,
+            G: G,
+            density: density
           }
         });
       }
