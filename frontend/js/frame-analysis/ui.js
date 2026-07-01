@@ -131,15 +131,6 @@
         document.querySelectorAll('.list-tab-content').forEach(c => c.style.display = 'none');
         const listName = subtab.id.replace('subtab-', '');
         document.getElementById(`list-container-${listName}`).style.display = 'block';
-
-        // Update list title dynamically
-        const titleEl = document.getElementById('active-elements-title');
-        if (titleEl) {
-          if (listName === 'nodes') titleEl.innerText = 'Node Coordinate Table';
-          else if (listName === 'members') titleEl.innerText = 'Beam Connection Table';
-          else if (listName === 'supports') titleEl.innerText = 'Support Configuration Table';
-          else if (listName === 'loads') titleEl.innerText = 'Load Configuration Table';
-        }
       });
     });
 
