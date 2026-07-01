@@ -1156,12 +1156,10 @@
             
             <!-- Fixed Input Controls (Swapped dynamically) -->
             <div class="card" style="flex-shrink: 0; padding: 12px; display: flex; flex-direction: column;" id="frame-input-container">
-              <h4 style="font-size: 0.85rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">Add Input</h4>
-              
-              <!-- Segmented Operation Selector -->
-              <div class="frame-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 12px;">
+              <h4 style="font-size: 0.85rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">Add In              <div class="frame-tabs" style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 12px; flex-wrap: wrap;">
                 <span class="btn-subtab active" id="btn-tab-nodes" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Nodes</span>
                 <span class="btn-subtab" id="btn-tab-members" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Beams</span>
+                <span class="btn-subtab" id="btn-tab-matsec" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Material / Section</span>
                 <span class="btn-subtab" id="btn-tab-supports" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Supports</span>
                 <span class="btn-subtab" id="btn-tab-loads" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Loads</span>
               </div>
@@ -1176,7 +1174,7 @@
                   </div>
                   <div class="input-group" style="flex: 1;">
                     <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Y (m)</label>
-                    <input type="number" id="node-input-y" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    <input type="number" id="node-input-y" value="3.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
                   </div>
                   <div class="input-group" style="flex: 1;">
                     <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Z (m)</label>
@@ -1189,73 +1187,93 @@
               <!-- Tab content: Members Input -->
               <div class="frame-tab-content" id="panel-tab-members" style="display: none;">
                 <h3 style="font-size: 0.95rem; margin-bottom: 2px;">Add Beam</h3>
-                <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px;">Auto-generates Beam ID. Connect nodes:</p>
-                <div style="display: flex; gap: 12px; margin-bottom: 10px; align-items: stretch;">
-                  <!-- Left Section (Node 1, Node 2 stacked) -->
-                  <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
-                    <div class="input-group">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 1 (Start)</label>
-                      <select id="member-input-start" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
-                    </div>
-                    <div class="input-group">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 2 (End)</label>
-                      <select id="member-input-end" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
-                    </div>
+                <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px;">Define geometry and connectivity:</p>
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                  <div class="input-group" style="flex: 1;">
+                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 1 (Start)</label>
+                    <select id="member-input-start" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
+                  </div>
+                  <div class="input-group" style="flex: 1;">
+                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 2 (End)</label>
+                    <select id="member-input-end" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-end;">
+                  <!-- Beta Angle -->
+                  <div class="input-group" style="flex: 0.8; min-width: 0;">
+                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Beta Angle (°)</label>
+                    <input type="number" id="member-input-beta" value="0.0" step="5" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;">
                   </div>
                   
-                  <!-- Vertical Divider -->
-                  <div style="width: 1px; background-color: var(--border-color); margin: 4px 0;"></div>
-                  
-                  <!-- Right Section (Material, Section, Beta stacked) -->
-                  <div style="flex: 1.2; display: flex; flex-direction: column; gap: 8px;">
-                    <div class="input-group">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Material Grade</label>
-                      <select id="member-input-material" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
-                    </div>
-                    <div class="input-group">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Section Profile</label>
-                      <select id="member-input-section" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;">
-                        <option value="Default">Default</option>
-                      </select>
-                    </div>
-                    <div class="input-group">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Beta Angle (°)</label>
-                      <input type="number" id="member-input-beta" value="0.0" step="5" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;">
+                  <!-- Releases checkbox bar -->
+                  <div style="flex: 2.2; min-width: 0;">
+                    <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Releases</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border-radius: 4px; padding: 4px 6px; border: 1px dashed var(--border-color); height: 26px;">
+                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
+                        <input type="checkbox" id="member-release-fx" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
+                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Fx</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
+                        <input type="checkbox" id="member-release-fy" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
+                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Fy</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
+                        <input type="checkbox" id="member-release-fz" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
+                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Fz</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
+                        <input type="checkbox" id="member-release-mx" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
+                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Mx</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
+                        <input type="checkbox" id="member-release-my" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
+                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">My</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
+                        <input type="checkbox" id="member-release-mz" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
+                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Mz</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <!-- Releases section -->
-                <div style="margin-bottom: 12px; border-top: 1px solid var(--border-color); padding-top: 8px;">
-                  <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">Releases</span>
-                  <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border-radius: 4px; padding: 6px 8px; border: 1px dashed var(--border-color);">
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                      <input type="checkbox" id="member-release-fx" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
-                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Fx</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                      <input type="checkbox" id="member-release-fy" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
-                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Fy</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                      <input type="checkbox" id="member-release-fz" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
-                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Fz</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                      <input type="checkbox" id="member-release-mx" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
-                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Mx</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                      <input type="checkbox" id="member-release-my" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
-                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">My</span>
-                    </div>
-                    <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                      <input type="checkbox" id="member-release-mz" style="cursor: pointer; width: 12px; height: 12px; margin: 0;">
-                      <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary);">Mz</span>
-                    </div>
+                <button class="btn btn-primary" id="btn-add-member" style="width: 100%; font-size: 0.75rem; padding: 6px 12px;">Add Member</button>
+              </div>
+
+              <!-- Tab content: Material/Section Assignment -->
+              <div class="frame-tab-content" id="panel-tab-matsec" style="display: none;">
+                <h3 style="font-size: 0.95rem; margin-bottom: 2px;">Assign Material & Section</h3>
+                <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px;">Select beams in 3D viewport or table below to assign properties.</p>
+                
+                <!-- Selected Beams Status -->
+                <div style="background: rgba(241, 196, 15, 0.05); border: 1px solid rgba(241, 196, 15, 0.2); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);">Selected Beams:</span>
+                    <span id="matsec-selected-badge" style="font-size: 0.7rem; font-weight: 700; color: var(--accent-secondary); background: rgba(241, 196, 15, 0.1); padding: 1px 6px; border-radius: 4px;">None</span>
+                  </div>
+                  <div id="matsec-current-details" style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 6px; border-top: 1px solid var(--border-color); padding-top: 6px; display: none;">
+                    <div style="margin-bottom: 2px;">Assigned Material: <span id="matsec-current-material" style="font-weight: 600; color: var(--text-primary);">--</span></div>
+                    <div>Assigned Section: <span id="matsec-current-section" style="font-weight: 600; color: var(--text-primary);">--</span></div>
                   </div>
                 </div>
-                <button class="btn btn-primary" id="btn-add-member" style="width: 100%; font-size: 0.75rem; padding: 6px 12px;">Add Member</button>
+
+                <!-- Assignment Form -->
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+                  <div class="input-group">
+                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Material Grade</label>
+                    <select id="matsec-input-material" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
+                  </div>
+                  <div class="input-group">
+                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Section Profile</label>
+                    <select id="matsec-input-section" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;">
+                      <option value="Default">Default</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <button class="btn btn-primary" id="btn-matsec-assign" style="width: 100%; font-size: 0.75rem; padding: 6px 12px;" disabled>Assign to Selected Beams</button>
               </div>
 
               <!-- Tab content: Supports Input -->

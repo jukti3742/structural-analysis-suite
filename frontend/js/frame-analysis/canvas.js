@@ -6,6 +6,7 @@
   let objectsGroup; // Group containing all structural objects (nodes, members, supports, loads)
   let selectedNodeId = null;
   let selectedMemberId = null;
+  let selectedMemberIds = new Set();
   let selectedSupportId = null;
   let selectedLoadIndex = null;
   let activeSelectionTool = 'node'; // 'node', 'member', 'support', 'load', 'pan'
@@ -21,6 +22,7 @@
   const FrameCanvas = {
     selectedNodeId: null,
     selectedMemberId: null,
+    selectedMemberIds: selectedMemberIds,
     selectedSupportId: null,
     selectedLoadIndex: null,
     activeSelectionTool: 'node',
@@ -82,12 +84,32 @@
       }
     },
 
-    selectMember: function(memberId) {
-      selectedMemberId = memberId;
-      this.selectedMemberId = memberId;
+    selectMember: function(memberId, isMulti = false) {
+      if (memberId === null) {
+        if (!isMulti) {
+          selectedMemberIds.clear();
+          selectedMemberId = null;
+          this.selectedMemberId = null;
+        }
+      } else {
+        if (isMulti) {
+          if (selectedMemberIds.has(memberId)) {
+            selectedMemberIds.delete(memberId);
+          } else {
+            selectedMemberIds.add(memberId);
+          }
+          selectedMemberId = selectedMemberIds.has(memberId) ? memberId : null;
+          this.selectedMemberId = selectedMemberId;
+        } else {
+          selectedMemberIds.clear();
+          selectedMemberIds.add(memberId);
+          selectedMemberId = memberId;
+          this.selectedMemberId = memberId;
+        }
+      }
       this.render();
       if (window.selectMemberFromCanvas) {
-        window.selectMemberFromCanvas(memberId);
+        window.selectMemberFromCanvas(memberId, isMulti);
       }
     },
 
@@ -205,10 +227,12 @@
           raycaster.params.Line.threshold = 0.15;
           const memberMeshes = objectsGroup.children.filter(child => child.userData && child.userData.memberId);
           const intersects = raycaster.intersectObjects(memberMeshes);
+          const isMatSecTab = document.getElementById('btn-tab-matsec')?.classList.contains('active');
+          const isMulti = e.ctrlKey || e.shiftKey || isMatSecTab;
           if (intersects.length > 0) {
-            this.selectMember(intersects[0].object.userData.memberId);
+            this.selectMember(intersects[0].object.userData.memberId, isMulti);
           } else {
-            this.selectMember(null);
+            this.selectMember(null, isMulti);
           }
         } else if (activeSelectionTool === 'support') {
           const supportMeshes = objectsGroup.children.filter(child => child.userData && child.userData.supportNodeId);
@@ -436,7 +460,7 @@
 
         // Render member line
         const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-        const isSelected = (m.id === selectedMemberId);
+        const isSelected = (m.id === selectedMemberId || selectedMemberIds.has(m.id));
         const colorVal = isSelected ? 0xf1c40f : 0x4682b4; // Gold if selected, Steel Blue otherwise
         const material = new THREE.LineBasicMaterial({ color: colorVal, linewidth: isSelected ? 4 : 2 });
         const line = new THREE.Line(geometry, material);

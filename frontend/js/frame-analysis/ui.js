@@ -79,14 +79,58 @@
         // Swap inputs display
         document.querySelectorAll('.frame-tab-content').forEach(p => p.style.display = 'none');
         const tabName = btn.id.replace('btn-tab-', '');
-        document.getElementById(`panel-tab-${tabName}`).style.display = 'block';
+        const targetPanel = document.getElementById(`panel-tab-${tabName}`);
+        if (targetPanel) {
+          targetPanel.style.display = 'block';
+        }
 
         // Swap properties display (synchronized table selection)
         document.querySelectorAll('.list-tab-content').forEach(c => c.style.display = 'none');
-        const listContainer = document.getElementById(`list-container-${tabName}`);
+        const listContainerId = tabName === 'matsec' ? 'list-container-members' : `list-container-${tabName}`;
+        const listContainer = document.getElementById(listContainerId);
         if (listContainer) {
           listContainer.style.display = 'block';
         }
+
+        // Auto-link active selection tool for better UX
+        if (tabName === 'members' || tabName === 'matsec') {
+          window.FrameCanvas.setSelectionTool('member');
+          const btnToolMember = document.getElementById('tool-select-member');
+          if (btnToolMember) {
+            document.querySelectorAll('.btn-select-tool').forEach(b => b.classList.remove('active-tab-btn'));
+            btnToolMember.classList.add('active-tab-btn');
+          }
+        } else if (tabName === 'nodes') {
+          window.FrameCanvas.setSelectionTool('node');
+          const btnToolNode = document.getElementById('tool-select-node');
+          if (btnToolNode) {
+            document.querySelectorAll('.btn-select-tool').forEach(b => b.classList.remove('active-tab-btn'));
+            btnToolNode.classList.add('active-tab-btn');
+          }
+        } else if (tabName === 'supports') {
+          window.FrameCanvas.setSelectionTool('support');
+          const btnToolSupport = document.getElementById('tool-select-support');
+          if (btnToolSupport) {
+            document.querySelectorAll('.btn-select-tool').forEach(b => b.classList.remove('active-tab-btn'));
+            btnToolSupport.classList.add('active-tab-btn');
+          }
+        } else if (tabName === 'loads') {
+          window.FrameCanvas.setSelectionTool('load');
+          const btnToolLoad = document.getElementById('tool-select-load');
+          if (btnToolLoad) {
+            document.querySelectorAll('.btn-select-tool').forEach(b => b.classList.remove('active-tab-btn'));
+            btnToolLoad.classList.add('active-tab-btn');
+          }
+        }
+
+        // Clear selection if switching tabs to avoid stray highlights (unless going between members and matsec)
+        if (tabName !== 'members' && tabName !== 'matsec') {
+          if (window.FrameCanvas.selectedMemberIds) {
+            window.FrameCanvas.selectMember(null, false);
+          }
+        }
+        
+        updateMatSecTabUI();
       });
     });
 
@@ -229,8 +273,8 @@
       const id = `M${k}`;
       const start = document.getElementById('member-input-start').value;
       const end = document.getElementById('member-input-end').value;
-      const section = document.getElementById('member-input-section').value;
-      const material = document.getElementById('member-input-material').value;
+      const section = 'IPE 200';
+      const material = 'Steel – E250';
       const beta = parseFloat(document.getElementById('member-input-beta').value) || 0.0;
 
       if (!start || !end) {
@@ -345,6 +389,34 @@
       updateTablesDisplay();
       window.FrameCanvas.render();
     });
+
+    // --- Material / Section Assignment Trigger ---
+    const btnMatSecAssign = document.getElementById('btn-matsec-assign');
+    if (btnMatSecAssign) {
+      btnMatSecAssign.addEventListener('click', () => {
+        const selectedIds = window.FrameCanvas.selectedMemberIds;
+        if (!selectedIds || selectedIds.size === 0) return;
+        
+        const mat = document.getElementById('matsec-input-material').value;
+        const sec = document.getElementById('matsec-input-section').value;
+        
+        let count = 0;
+        selectedIds.forEach(id => {
+          if (window.FrameModel.members[id]) {
+            window.FrameModel.members[id].materialName = mat;
+            window.FrameModel.members[id].sectionName = sec;
+            count++;
+          }
+        });
+        
+        window.FrameModel.results = null; // Invalidate cache
+        updateTablesDisplay();
+        window.FrameCanvas.render();
+        updateMatSecTabUI();
+        
+        showToast(`Assigned properties to ${count} beam(s) successfully.`);
+      });
+    }
 
     // --- Solve Trigger ---
     document.getElementById('btn-solve-frame').addEventListener('click', async () => {
@@ -498,8 +570,9 @@
     const memberOptions = members.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
     document.getElementById('load-input-member').innerHTML = memberOptions;
 
-    // 3. Populate Section Profiles drop-down from Registry & Database
+    // 3. Populate Section Profiles drop-downs
     const sectionSel = document.getElementById('member-input-section');
+    const matsecSectionSel = document.getElementById('matsec-input-section');
     let sectionOptions = `<option value="Default">Default (A=100cm², I=10000cm⁴)</option>`;
     
     // Add active section if calculated
@@ -529,24 +602,32 @@
         }
       }
     }
-    sectionSel.innerHTML = sectionOptions;
     
-    // Pre-select IPE 200 by default if it was not set yet
-    if (sectionSel.value === 'Default') {
-      const hasIpe200 = sectionSel.querySelector('option[value="IPE 200"]');
-      if (hasIpe200) {
-        sectionSel.value = 'IPE 200';
+    if (sectionSel) {
+      sectionSel.innerHTML = sectionOptions;
+      if (sectionSel.value === 'Default') {
+        const hasIpe200 = sectionSel.querySelector('option[value="IPE 200"]');
+        if (hasIpe200) sectionSel.value = 'IPE 200';
+      }
+    }
+    if (matsecSectionSel) {
+      matsecSectionSel.innerHTML = sectionOptions;
+      if (matsecSectionSel.value === 'Default') {
+        const hasIpe200 = matsecSectionSel.querySelector('option[value="IPE 200"]');
+        if (hasIpe200) matsecSectionSel.value = 'IPE 200';
       }
     }
 
-    // 4. Populate Material Grade drop-down from MaterialDatabase
+    // 4. Populate Material Grade drop-downs
     const materialSel = document.getElementById('member-input-material');
-    if (materialSel && window.MaterialDatabase) {
+    const matsecMaterialSel = document.getElementById('matsec-input-material');
+    if (window.MaterialDatabase) {
       let materialOptions = '';
       for (const name in window.MaterialDatabase) {
         materialOptions += `<option value="${name}">${name}</option>`;
       }
-      materialSel.innerHTML = materialOptions;
+      if (materialSel) materialSel.innerHTML = materialOptions;
+      if (matsecMaterialSel) matsecMaterialSel.innerHTML = materialOptions;
     }
   }
 
@@ -666,6 +747,7 @@
             window.FrameModel.members[mId].sectionName = e.target.value;
             window.FrameModel.results = null; // Invalidate cache
             window.FrameCanvas.render();
+            updateMatSecTabUI();
           }
         });
       });
@@ -677,6 +759,7 @@
             window.FrameModel.members[mId].materialName = e.target.value;
             window.FrameModel.results = null; // Invalidate cache
             window.FrameCanvas.render();
+            updateMatSecTabUI();
           }
         });
       });
@@ -687,8 +770,11 @@
         const firstCell = row.querySelector('td');
         if (firstCell) {
           const rowMemberId = firstCell.innerText.trim();
-          if (window.FrameCanvas && window.FrameCanvas.selectedMemberId === rowMemberId) {
+          const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
+          if (isSelected) {
             row.classList.add('selected-row');
+          } else {
+            row.classList.remove('selected-row');
           }
         }
 
@@ -697,10 +783,10 @@
           const firstCell = row.querySelector('td');
           if (firstCell && window.FrameCanvas) {
             const memberId = firstCell.innerText.trim();
-            window.FrameCanvas.selectedMemberId = memberId;
-            window.FrameCanvas.render();
-            rows.forEach(r => r.classList.remove('selected-row'));
-            row.classList.add('selected-row');
+            const isMatSecTab = document.getElementById('btn-tab-matsec')?.classList.contains('active');
+            const isMulti = e.ctrlKey || e.shiftKey || isMatSecTab;
+            
+            window.FrameCanvas.selectMember(memberId, isMulti);
           }
         });
       });
@@ -1060,7 +1146,7 @@
     }
   };
 
-  window.selectMemberFromCanvas = function(memberId) {
+  window.selectMemberFromCanvas = function(memberId, isMulti = false) {
     const tableRows = document.querySelectorAll('#table-members tbody tr');
     let targetRow = null;
 
@@ -1068,9 +1154,12 @@
       const firstCell = row.querySelector('td');
       if (firstCell) {
         const rowMemberId = firstCell.innerText.trim();
-        if (rowMemberId === memberId) {
+        const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
+        if (isSelected) {
           row.classList.add('selected-row');
-          targetRow = row;
+          if (rowMemberId === memberId) {
+            targetRow = row;
+          }
         } else {
           row.classList.remove('selected-row');
         }
@@ -1078,14 +1167,17 @@
     });
 
     if (targetRow) {
-      const tabMembers = document.getElementById('btn-tab-members');
-      if (tabMembers && !tabMembers.classList.contains('active')) {
-        tabMembers.click();
+      const isMatSecTab = document.getElementById('btn-tab-matsec')?.classList.contains('active');
+      if (!isMatSecTab) {
+        const tabMembers = document.getElementById('btn-tab-members');
+        if (tabMembers && !tabMembers.classList.contains('active')) {
+          tabMembers.click();
+        }
       }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } else {
-      tableRows.forEach(row => row.classList.remove('selected-row'));
     }
+    
+    updateMatSecTabUI();
   };
 
   window.selectSupportFromCanvas = function(nodeId) {
@@ -1139,5 +1231,70 @@
       tableRows.forEach(row => row.classList.remove('selected-row'));
     }
   };
+
+  function updateMatSecTabUI() {
+    const badge = document.getElementById('matsec-selected-badge');
+    const details = document.getElementById('matsec-current-details');
+    const matSpan = document.getElementById('matsec-current-material');
+    const secSpan = document.getElementById('matsec-current-section');
+    const assignBtn = document.getElementById('btn-matsec-assign');
+    
+    if (!badge) return;
+    
+    const selectedIds = window.FrameCanvas.selectedMemberIds;
+    if (!selectedIds || selectedIds.size === 0) {
+      badge.textContent = 'None';
+      details.style.display = 'none';
+      assignBtn.setAttribute('disabled', 'true');
+      return;
+    }
+    
+    assignBtn.removeAttribute('disabled');
+    
+    const ids = Array.from(selectedIds);
+    if (ids.length === 1) {
+      badge.textContent = ids[0];
+      const m = window.FrameModel.members[ids[0]];
+      if (m) {
+        matSpan.textContent = m.materialName || 'Steel – E250';
+        secSpan.textContent = m.sectionName || 'Default';
+        
+        const matInput = document.getElementById('matsec-input-material');
+        if (matInput) matInput.value = m.materialName || 'Steel – E250';
+        
+        const secInput = document.getElementById('matsec-input-section');
+        if (secInput) secInput.value = m.sectionName || 'Default';
+      }
+      details.style.display = 'block';
+    } else {
+      badge.textContent = `${ids.length} Beams`;
+      
+      let commonMat = null;
+      let commonSec = null;
+      let matMixed = false;
+      let secMixed = false;
+      
+      ids.forEach((id, idx) => {
+        const m = window.FrameModel.members[id];
+        if (m) {
+          const mat = m.materialName || 'Steel – E250';
+          const sec = m.sectionName || 'Default';
+          if (idx === 0) {
+            commonMat = mat;
+            commonSec = sec;
+          } else {
+            if (commonMat !== mat) matMixed = true;
+            if (commonSec !== sec) secMixed = true;
+          }
+        }
+      });
+      
+      matSpan.textContent = matMixed ? 'Multiple Values' : commonMat;
+      secSpan.textContent = secMixed ? 'Multiple Values' : commonSec;
+      details.style.display = 'block';
+    }
+  }
+
+  window.updateMatSecTabUI = updateMatSecTabUI;
 
 })();
