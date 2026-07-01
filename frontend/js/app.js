@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Asynchronously load the steel profiles database
 async function loadSectionDatabase() {
   try {
-    const response = await fetch('presets.json');
+    const response = await fetch('section-presets.json');
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     SECTION_DATABASE = await response.json();
     

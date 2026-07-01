@@ -4,7 +4,7 @@ import json
 import traceback
 import os
 
-from backend.solver.engine import analyze_beam
+from backend.solver.beam_solver import analyze_beam
 from backend.solver.frame_solver import analyze_frame
 
 # Render and Railway inject a dynamic PORT env variable. 
