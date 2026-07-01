@@ -1506,23 +1506,47 @@ input:checked + .switch-slider:before {
 }
 
 /* Active Model Lists Subtabs styles */
+.frame-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
+  margin-bottom: 12px !important;
+}
+
 .btn-subtab {
-  padding: 4px 10px;
-  border-radius: 4px;
-  background-color: transparent;
-  color: var(--text-secondary);
-  font-weight: 600;
-  transition: all 0.2s ease;
-  user-select: none;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 6px !important;
+  border: 1px solid var(--border-color) !important;
+  background-color: rgba(255, 255, 255, 0.01) !important;
+  color: var(--text-secondary) !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  padding: 6px 4px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  user-select: none !important;
+  min-height: 28px !important;
+  box-sizing: border-box !important;
 }
+
 .btn-subtab:hover {
-  color: var(--text-primary);
-  background-color: var(--border-color);
+  color: var(--text-primary) !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: var(--text-secondary) !important;
 }
+
 .btn-subtab.active {
-  background-color: var(--border-color);
-  color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
+  background-color: rgba(241, 196, 15, 0.09) !important;
+  border-color: var(--accent-secondary) !important;
+  color: var(--accent-secondary) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 8px rgba(241, 196, 15, 0.15) !important;
 }
 
 /* Proper visible grid lines for tables in Active Model Elements */
