@@ -1508,7 +1508,7 @@ input:checked + .switch-slider:before {
 /* Active Model Lists Subtabs styles */
 .frame-tabs {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)) !important;
+  grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)) !important;
   gap: 6px !important;
   width: 100% !important;
   border-bottom: none !important;
@@ -1518,35 +1518,36 @@ input:checked + .switch-slider:before {
 
 .btn-subtab {
   display: flex !important;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
   border-radius: 6px !important;
   border: 1px solid var(--border-color) !important;
-  background-color: rgba(255, 255, 255, 0.01) !important;
+  background-color: var(--bg-secondary) !important; /* Solid neutral background to distinguish controls */
   color: var(--text-secondary) !important;
-  font-size: 0.7rem !important;
-  font-weight: 600 !important;
-  padding: 6px 4px !important;
+  font-size: 0.68rem !important;
+  font-weight: bold !important; /* Bold labels for improved readability */
+  padding: 4px 6px !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
   user-select: none !important;
-  min-height: 28px !important;
+  height: 38px !important; /* Enforce uniform height */
   box-sizing: border-box !important;
+  line-height: 1.15 !important;
 }
 
 .btn-subtab:hover {
   color: var(--text-primary) !important;
-  background-color: rgba(255, 255, 255, 0.05) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
   border-color: var(--text-secondary) !important;
 }
 
 .btn-subtab.active {
-  background-color: rgba(241, 196, 15, 0.09) !important;
+  background-color: var(--accent-secondary) !important; /* Prominent solid gold background */
   border-color: var(--accent-secondary) !important;
-  color: var(--accent-secondary) !important;
-  font-weight: 700 !important;
-  box-shadow: 0 0 8px rgba(241, 196, 15, 0.15) !important;
+  color: #0f172a !important; /* Bold dark text for high contrast and readability */
+  font-weight: bold !important;
+  box-shadow: 0 0 10px rgba(241, 196, 15, 0.25) !important;
 }
 
 /* Proper visible grid lines for tables in Active Model Elements */
