@@ -3,6 +3,36 @@
  */
 (function() {
   
+  let activeUnits = {
+    nodeX: 'm',
+    nodeY: 'm',
+    nodeZ: 'm',
+    loadVal: 'kN'
+  };
+
+  function getDistFactor(unit) {
+    switch (unit) {
+      case 'm': return 1.0;
+      case 'cm': return 0.01;
+      case 'mm': return 0.001;
+      case 'in': return 0.0254;
+      case 'ft': return 0.3048;
+      default: return 1.0;
+    }
+  }
+
+  function getForceFactor(unit) {
+    switch (unit) {
+      case 'kN': return 1000.0;
+      case 'N': return 1.0;
+      case 'lbf': return 4.4482216153;
+      case 'kip': return 4448.2216153;
+      case 'kg': return 9.80665;
+      case 'MTon': return 9806.65;
+      default: return 1000.0;
+    }
+  }
+  
   // Initialize the Frame Analysis tab and controls on first load
   window.initFrameAnalysisView = function() {
     // 1. Initialize WebGL Viewport
@@ -22,6 +52,22 @@
   };
 
   function bindUIEvents() {
+    // Table Unit dropdown change listeners
+    const bindUnitChangeListener = (id, key) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.value = activeUnits[key];
+        el.addEventListener('change', (e) => {
+          activeUnits[key] = e.target.value;
+          updateTablesDisplay();
+        });
+      }
+    };
+    bindUnitChangeListener('node-unit-x', 'nodeX');
+    bindUnitChangeListener('node-unit-y', 'nodeY');
+    bindUnitChangeListener('node-unit-z', 'nodeZ');
+    bindUnitChangeListener('load-unit-val', 'loadVal');
+
     // Tab switching for inputs panel
     document.querySelectorAll('.frame-tabs .btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -350,23 +396,26 @@
         if (e.target.classList.contains('editable-coord')) {
           const nodeId = e.target.getAttribute('data-node-id');
           const coord = e.target.getAttribute('data-coord');
-          const originalVal = parseFloat(e.target.getAttribute('data-original-val'));
-          const newVal = parseFloat(e.target.innerText.trim());
+          const originalVal = parseFloat(e.target.getAttribute('data-original-val')); // in meters
+          const newVal = parseFloat(e.target.innerText.trim()); // in selected unit
+
+          const unit = coord === 'x' ? activeUnits.nodeX : (coord === 'y' ? activeUnits.nodeY : activeUnits.nodeZ);
+          const newValMeters = newVal * getDistFactor(unit);
 
           if (isNaN(newVal)) {
-            e.target.innerText = originalVal.toFixed(2);
+            e.target.innerText = (originalVal / getDistFactor(unit)).toFixed(2);
             showToast('Invalid numeric coordinate value.');
             return;
           }
 
           // If coordinate hasn't changed, do nothing
-          if (Math.abs(newVal - originalVal) < 1e-9) {
-            e.target.innerText = originalVal.toFixed(2);
+          if (Math.abs(newValMeters - originalVal) < 1e-9) {
+            e.target.innerText = (originalVal / getDistFactor(unit)).toFixed(2);
             return;
           }
 
           // Update coordinate in model
-          window.FrameModel.nodes[nodeId][coord] = newVal;
+          window.FrameModel.nodes[nodeId][coord] = newValMeters;
 
           // Invalidate previous analysis results
           let clearedResults = false;
@@ -389,9 +438,9 @@
           }
 
           if (clearedResults) {
-            showToast(`Warning: Node ${nodeId} ${coord.toUpperCase()} coordinate updated to ${newVal.toFixed(2)}m. Previous analysis results cleared.`);
+            showToast(`Warning: Node ${nodeId} ${coord.toUpperCase()} coordinate updated to ${newValMeters.toFixed(3)} m. Previous analysis results cleared.`);
           } else {
-            showToast(`Node ${nodeId} ${coord.toUpperCase()} coordinate updated to ${newVal.toFixed(2)}m.`);
+            showToast(`Node ${nodeId} ${coord.toUpperCase()} coordinate updated to ${newValMeters.toFixed(3)} m.`);
           }
 
           // Refresh tables & views
@@ -471,9 +520,9 @@
       tbodyNodes.innerHTML = nodes.map(n => `
         <tr>
           <td><strong>${n.id}</strong></td>
-          <td contenteditable="true" class="editable-coord" data-node-id="${n.id}" data-coord="x" data-original-val="${n.x}">${n.x.toFixed(2)}</td>
-          <td contenteditable="true" class="editable-coord" data-node-id="${n.id}" data-coord="y" data-original-val="${n.y}">${n.y.toFixed(2)}</td>
-          <td contenteditable="true" class="editable-coord" data-node-id="${n.id}" data-coord="z" data-original-val="${n.z}">${n.z.toFixed(2)}</td>
+          <td contenteditable="true" class="editable-coord" data-node-id="${n.id}" data-coord="x" data-original-val="${n.x}">${(n.x / getDistFactor(activeUnits.nodeX)).toFixed(2)}</td>
+          <td contenteditable="true" class="editable-coord" data-node-id="${n.id}" data-coord="y" data-original-val="${n.y}">${(n.y / getDistFactor(activeUnits.nodeY)).toFixed(2)}</td>
+          <td contenteditable="true" class="editable-coord" data-node-id="${n.id}" data-coord="z" data-original-val="${n.z}">${(n.z / getDistFactor(activeUnits.nodeZ)).toFixed(2)}</td>
           <td>
             <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteNode('${n.id}'); window.initFrameAnalysisView();">Delete</button>
           </td>
@@ -609,13 +658,40 @@
     } else {
       tbodyLoads.innerHTML = loads.map((l, index) => {
         const target = l.type === 'NodalLoad' ? `Node ${l.nodeId}` : `Member ${l.memberId}`;
-        const val = l.type === 'NodalLoad' ? (l.force / 1000.0).toFixed(1) + ' kN' : (l.force / 1000.0).toFixed(1) + ' kN/m';
+        
+        const fUnit = activeUnits.loadVal;
+        const dUnit = (fUnit === 'lbf' || fUnit === 'kip') ? 'ft' : 'm';
+        
+        let displayValStr = '';
+        if (l.type === 'NodalLoad') {
+          const isMoment = l.direction.startsWith('M');
+          if (isMoment) {
+            const factor = getForceFactor(fUnit) * getDistFactor(dUnit);
+            const valConv = parseFloat(l.force) / factor;
+            displayValStr = `${valConv.toFixed(1)} ${fUnit}·${dUnit}`;
+          } else {
+            const factor = getForceFactor(fUnit);
+            const valConv = parseFloat(l.force) / factor;
+            displayValStr = `${valConv.toFixed(1)} ${fUnit}`;
+          }
+        } else {
+          if (l.type === 'MemberPointLoad') {
+            const factor = getForceFactor(fUnit);
+            const valConv = parseFloat(l.force) / factor;
+            displayValStr = `${valConv.toFixed(1)} ${fUnit}`;
+          } else {
+            const factor = getForceFactor(fUnit) / getDistFactor(dUnit);
+            const valConv = parseFloat(l.force) / factor;
+            displayValStr = `${valConv.toFixed(1)} ${fUnit}/${dUnit}`;
+          }
+        }
+
         return `
           <tr>
             <td>${target}</td>
             <td>${l.type.replace('Member', '').replace('Load', '')}</td>
             <td>${l.direction}</td>
-            <td>${val}</td>
+            <td>${displayValStr}</td>
             <td>
               <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteLoad(${index}); window.initFrameAnalysisView();">Delete</button>
             </td>
