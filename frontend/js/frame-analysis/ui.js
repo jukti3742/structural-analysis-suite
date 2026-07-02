@@ -264,24 +264,91 @@
       window.FrameCanvas.render();
     });
 
+    // Sync Select in Model dropdown selection mode changes
+    const startSel = document.getElementById('member-input-start');
+    const endSel = document.getElementById('member-input-end');
+    
+    startSel.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'select-in-model') {
+        if (endSel.value !== 'select-in-model') {
+          endSel.value = 'select-in-model';
+        }
+        if (window.FrameCanvas && window.FrameCanvas.selectedNodeIds) {
+          window.FrameCanvas.selectNode(null, false);
+        }
+      } else {
+        if (endSel.value === 'select-in-model') {
+          const firstDiffNode = Array.from(endSel.options)
+            .map(opt => opt.value)
+            .find(v => v !== 'select-in-model' && v !== val);
+          if (firstDiffNode) {
+            endSel.value = firstDiffNode;
+          }
+        }
+      }
+    });
+
+    endSel.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'select-in-model') {
+        if (startSel.value !== 'select-in-model') {
+          startSel.value = 'select-in-model';
+        }
+        if (window.FrameCanvas && window.FrameCanvas.selectedNodeIds) {
+          window.FrameCanvas.selectNode(null, false);
+        }
+      } else {
+        if (startSel.value === 'select-in-model') {
+          const firstDiffNode = Array.from(startSel.options)
+            .map(opt => opt.value)
+            .find(v => v !== 'select-in-model' && v !== val);
+          if (firstDiffNode) {
+            startSel.value = firstDiffNode;
+          }
+        }
+      }
+    });
+
     // Add Member
     document.getElementById('btn-add-member').addEventListener('click', () => {
+      const startVal = startSel.value;
+      const endVal = endSel.value;
+      
+      if (startVal === 'select-in-model' || endVal === 'select-in-model') {
+        const selectedIds = window.FrameCanvas.selectedNodeIds;
+        if (!selectedIds || selectedIds.size === 0) {
+          showToast('Please select exactly two nodes to create a beam.');
+          return;
+        }
+        if (selectedIds.size === 1) {
+          showToast('A second node must be selected to create a beam.');
+          return;
+        }
+        if (selectedIds.size > 2) {
+          showToast('Please select exactly two nodes to create a beam.');
+          return;
+        }
+        if (selectedIds.size === 2) {
+          createBeamFromModelSelection();
+          return;
+        }
+      }
+
       let k = 1;
       while (window.FrameModel.members[`M${k}`]) {
         k++;
       }
       const id = `M${k}`;
-      const start = document.getElementById('member-input-start').value;
-      const end = document.getElementById('member-input-end').value;
       const section = 'IPE 200';
       const material = 'Steel – E250';
       const beta = parseFloat(document.getElementById('member-input-beta').value) || 0.0;
 
-      if (!start || !end) {
+      if (!startVal || !endVal) {
         showToast('Please specify both Start Node and End Node.');
         return;
       }
-      if (start === end) {
+      if (startVal === endVal) {
         showToast('Start Node and End Node cannot be identical.');
         return;
       }
@@ -296,7 +363,7 @@
         Rzj: document.getElementById('member-release-mz').checked
       };
 
-      window.FrameModel.addMember(id, start, end, section, material, beta, releases);
+      window.FrameModel.addMember(id, startVal, endVal, section, material, beta, releases);
       showToast(`Beam ${id} added successfully.`);
       
       refreshAllDropdowns();
@@ -560,9 +627,31 @@
     const members = window.FrameModel.getMemberList();
 
     // 1. Populate Node drop-downs
+    const memberNodeOptions = `<option value="select-in-model">Select in Model</option>` + nodes.map(n => `<option value="${n.id}">${n.id}</option>`).join('');
+    
+    const startSel = document.getElementById('member-input-start');
+    const endSel = document.getElementById('member-input-end');
+    const prevStart = startSel ? startSel.value : 'select-in-model';
+    const prevEnd = endSel ? endSel.value : 'select-in-model';
+    
+    if (startSel) {
+      startSel.innerHTML = memberNodeOptions;
+      if (prevStart && startSel.querySelector(`option[value="${prevStart}"]`)) {
+        startSel.value = prevStart;
+      } else {
+        startSel.value = 'select-in-model';
+      }
+    }
+    if (endSel) {
+      endSel.innerHTML = memberNodeOptions;
+      if (prevEnd && endSel.querySelector(`option[value="${prevEnd}"]`)) {
+        endSel.value = prevEnd;
+      } else {
+        endSel.value = 'select-in-model';
+      }
+    }
+
     const nodeOptions = nodes.map(n => `<option value="${n.id}">${n.id}</option>`).join('');
-    document.getElementById('member-input-start').innerHTML = nodeOptions;
-    document.getElementById('member-input-end').innerHTML = nodeOptions;
     document.getElementById('support-input-node').innerHTML = nodeOptions;
     document.getElementById('load-input-node').innerHTML = nodeOptions;
 
@@ -656,8 +745,11 @@
         const firstCell = row.querySelector('td');
         if (firstCell) {
           const rowNodeId = firstCell.innerText.trim();
-          if (window.FrameCanvas && window.FrameCanvas.selectedNodeId === rowNodeId) {
+          const isSelected = window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId);
+          if (isSelected) {
             row.classList.add('selected-row');
+          } else {
+            row.classList.remove('selected-row');
           }
         }
 
@@ -669,12 +761,11 @@
           const firstCell = row.querySelector('td');
           if (firstCell && window.FrameCanvas) {
             const nodeId = firstCell.innerText.trim();
-            window.FrameCanvas.selectedNodeId = nodeId;
-            window.FrameCanvas.render();
+            const startSel = document.getElementById('member-input-start');
+            const isSelectInModel = startSel && startSel.value === 'select-in-model';
+            const isMulti = e.ctrlKey || e.shiftKey || isSelectInModel;
             
-            // Highlight this row and remove highlight from others
-            rows.forEach(r => r.classList.remove('selected-row'));
-            row.classList.add('selected-row');
+            window.FrameCanvas.selectNode(nodeId, isMulti);
           }
         });
       });
@@ -1117,7 +1208,7 @@
     reportWindow.document.close();
   }
 
-  window.selectNodeFromCanvas = function(nodeId) {
+  window.selectNodeFromCanvas = function(nodeId, isMulti = false) {
     const tableRows = document.querySelectorAll('#table-nodes tbody tr');
     let targetRow = null;
 
@@ -1125,9 +1216,12 @@
       const firstCell = row.querySelector('td');
       if (firstCell) {
         const rowNodeId = firstCell.innerText.trim();
-        if (rowNodeId === nodeId) {
+        const isSelected = window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId);
+        if (isSelected) {
           row.classList.add('selected-row');
-          targetRow = row;
+          if (rowNodeId === nodeId) {
+            targetRow = row;
+          }
         } else {
           row.classList.remove('selected-row');
         }
@@ -1135,16 +1229,80 @@
     });
 
     if (targetRow) {
-      const tabNodes = document.getElementById('btn-tab-nodes');
-      if (tabNodes && !tabNodes.classList.contains('active')) {
-        tabNodes.click();
+      const startSel = document.getElementById('member-input-start');
+      const isSelectInModel = startSel && startSel.value === 'select-in-model';
+      if (!isSelectInModel) {
+        const tabNodes = document.getElementById('btn-tab-nodes');
+        if (tabNodes && !tabNodes.classList.contains('active')) {
+          tabNodes.click();
+        }
       }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } else {
-      // Clear selection if nodeId is null
-      tableRows.forEach(row => row.classList.remove('selected-row'));
+    }
+
+    const startSel = document.getElementById('member-input-start');
+    const endSel = document.getElementById('member-input-end');
+    if (startSel && endSel && startSel.value === 'select-in-model') {
+      const selectedIds = Array.from(window.FrameCanvas.selectedNodeIds);
+      if (selectedIds.length === 1) {
+        startSel.value = selectedIds[0];
+        showToast(`Node 1 selected: ${selectedIds[0]}. Select a second node in the model.`);
+      } else if (selectedIds.length === 2) {
+        startSel.value = selectedIds[0];
+        endSel.value = selectedIds[1];
+        createBeamFromModelSelection();
+      } else if (selectedIds.length > 2) {
+        showToast('Please select exactly two nodes to create a beam.');
+      }
     }
   };
+
+  function createBeamFromModelSelection() {
+    const startSel = document.getElementById('member-input-start');
+    const endSel = document.getElementById('member-input-end');
+    const start = startSel.value;
+    const end = endSel.value;
+    
+    if (!start || start === 'select-in-model' || !end || end === 'select-in-model') {
+      showToast('Please select exactly two nodes to create a beam.');
+      return;
+    }
+    if (start === end) {
+      showToast('Start Node and End Node cannot be identical.');
+      return;
+    }
+    
+    let k = 1;
+    while (window.FrameModel.members[`M${k}`]) {
+      k++;
+    }
+    const id = `M${k}`;
+    const section = 'IPE 200';
+    const material = 'Steel – E250';
+    const beta = parseFloat(document.getElementById('member-input-beta').value) || 0.0;
+
+    const releases = {
+      Dxi: false, Dyi: false, Dzi: false, Rxi: false, Ryi: false, Rzi: false,
+      Dxj: document.getElementById('member-release-fx').checked,
+      Dyj: document.getElementById('member-release-fy').checked,
+      Dzj: document.getElementById('member-release-fz').checked,
+      Rxj: document.getElementById('member-release-mx').checked,
+      Ryj: document.getElementById('member-release-my').checked,
+      Rzj: document.getElementById('member-release-mz').checked
+    };
+
+    window.FrameModel.addMember(id, start, end, section, material, beta, releases);
+    showToast(`Beam ${id} added successfully.`);
+    
+    if (window.FrameCanvas) {
+      window.FrameCanvas.selectNode(null, false);
+    }
+    startSel.value = 'select-in-model';
+    endSel.value = 'select-in-model';
+    
+    updateTablesDisplay();
+    window.FrameCanvas.render();
+  }
 
   window.selectMemberFromCanvas = function(memberId, isMulti = false) {
     const tableRows = document.querySelectorAll('#table-members tbody tr');

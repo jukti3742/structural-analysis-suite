@@ -7,6 +7,7 @@
   let selectedNodeId = null;
   let selectedMemberId = null;
   let selectedMemberIds = new Set();
+  let selectedNodeIds = new Set();
   let selectedSupportId = null;
   let selectedLoadIndex = null;
   let activeSelectionTool = 'node'; // 'node', 'member', 'support', 'load', 'pan'
@@ -21,6 +22,7 @@
 
   const FrameCanvas = {
     selectedNodeId: null,
+    selectedNodeIds: selectedNodeIds,
     selectedMemberId: null,
     selectedMemberIds: selectedMemberIds,
     selectedSupportId: null,
@@ -75,12 +77,32 @@
       this.render();
     },
 
-    selectNode: function(nodeId) {
-      selectedNodeId = nodeId;
-      this.selectedNodeId = nodeId;
+    selectNode: function(nodeId, isMulti = false) {
+      if (nodeId === null) {
+        if (!isMulti) {
+          selectedNodeIds.clear();
+          selectedNodeId = null;
+          this.selectedNodeId = null;
+        }
+      } else {
+        if (isMulti) {
+          if (selectedNodeIds.has(nodeId)) {
+            selectedNodeIds.delete(nodeId);
+          } else {
+            selectedNodeIds.add(nodeId);
+          }
+          selectedNodeId = selectedNodeIds.has(nodeId) ? nodeId : null;
+          this.selectedNodeId = selectedNodeId;
+        } else {
+          selectedNodeIds.clear();
+          selectedNodeIds.add(nodeId);
+          selectedNodeId = nodeId;
+          this.selectedNodeId = nodeId;
+        }
+      }
       this.render();
       if (window.selectNodeFromCanvas) {
-        window.selectNodeFromCanvas(nodeId);
+        window.selectNodeFromCanvas(nodeId, isMulti);
       }
     },
 
@@ -218,12 +240,27 @@
         if (activeSelectionTool === 'node') {
           const nodeMeshes = objectsGroup.children.filter(child => child.userData && child.userData.nodeId);
           const intersects = raycaster.intersectObjects(nodeMeshes);
+          const isMulti = e.ctrlKey || e.shiftKey;
           if (intersects.length > 0) {
-            this.selectNode(intersects[0].object.userData.nodeId);
+            this.selectNode(intersects[0].object.userData.nodeId, isMulti);
           } else {
-            this.selectNode(null);
+            this.selectNode(null, isMulti);
           }
         } else if (activeSelectionTool === 'member') {
+          // If in "Select in Model" mode (Members tab is active and dropdown value is "select-in-model"), click selects nodes!
+          const isBeamsTabActive = document.getElementById('btn-tab-members')?.classList.contains('active');
+          const isSelectInModel = document.getElementById('member-input-start')?.value === 'select-in-model';
+          
+          if (isBeamsTabActive && isSelectInModel) {
+            const nodeMeshes = objectsGroup.children.filter(child => child.userData && child.userData.nodeId);
+            const intersects = raycaster.intersectObjects(nodeMeshes);
+            if (intersects.length > 0) {
+              const nodeId = intersects[0].object.userData.nodeId;
+              this.selectNode(nodeId, true);
+              return;
+            }
+          }
+
           raycaster.params.Line.threshold = 0.15;
           const memberMeshes = objectsGroup.children.filter(child => child.userData && child.userData.memberId);
           const intersects = raycaster.intersectObjects(memberMeshes);
@@ -479,7 +516,7 @@
       // 2. Draw Nodes
       nodes.forEach(n => {
         const geometry = new THREE.SphereGeometry(0.12, 16, 16);
-        const isSelected = (n.id === selectedNodeId);
+        const isSelected = (n.id === selectedNodeId || selectedNodeIds.has(n.id));
         const colorVal = isSelected ? 0xf1c40f : 0xe0e0e0;
         const material = new THREE.MeshLambertMaterial({ 
           color: colorVal,
