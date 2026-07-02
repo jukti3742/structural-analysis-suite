@@ -1206,7 +1206,6 @@
       } else if (selectedIds.length === 2) {
         startSel.value = selectedIds[0];
         endSel.value = selectedIds[1];
-        createBeamFromModelSelection();
       } else if (selectedIds.length > 2) {
         showToast('Please select exactly two nodes to create a beam.');
       }
