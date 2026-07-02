@@ -240,11 +240,15 @@
         if (activeSelectionTool === 'node') {
           const nodeMeshes = objectsGroup.children.filter(child => child.userData && child.userData.nodeId);
           const intersects = raycaster.intersectObjects(nodeMeshes);
-          const isMulti = e.ctrlKey || e.shiftKey;
+          const startSel = document.getElementById('member-input-start');
+          const isSelectInModel = startSel && startSel.value === 'select-in-model';
+          const isMulti = e.ctrlKey || e.shiftKey || isSelectInModel;
           if (intersects.length > 0) {
             this.selectNode(intersects[0].object.userData.nodeId, isMulti);
           } else {
-            this.selectNode(null, isMulti);
+            if (!isSelectInModel) {
+              this.selectNode(null, isMulti);
+            }
           }
         } else if (activeSelectionTool === 'member') {
           // If in "Select in Model" mode (Members tab is active and dropdown value is "select-in-model"), click selects nodes!

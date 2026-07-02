@@ -92,36 +92,7 @@
           listContainer.style.display = 'block';
         }
 
-        // Auto-link active selection tool for better UX
-        if (tabName === 'members' || tabName === 'matsec') {
-          window.FrameCanvas.setSelectionTool('member');
-          const btnToolMember = document.getElementById('tool-select-member');
-          if (btnToolMember) {
-            document.querySelectorAll('.btn-select-tool').forEach(b => b.classList.remove('active-tab-btn'));
-            btnToolMember.classList.add('active-tab-btn');
-          }
-        } else if (tabName === 'nodes') {
-          window.FrameCanvas.setSelectionTool('node');
-          const btnToolNode = document.getElementById('tool-select-node');
-          if (btnToolNode) {
-            document.querySelectorAll('.btn-select-tool').forEach(b => b.classList.remove('active-tab-btn'));
-            btnToolNode.classList.add('active-tab-btn');
-          }
-        } else if (tabName === 'supports') {
-          window.FrameCanvas.setSelectionTool('support');
-          const btnToolSupport = document.getElementById('tool-select-support');
-          if (btnToolSupport) {
-            document.querySelectorAll('.btn-select-tool').forEach(b => b.classList.remove('active-tab-btn'));
-            btnToolSupport.classList.add('active-tab-btn');
-          }
-        } else if (tabName === 'loads') {
-          window.FrameCanvas.setSelectionTool('load');
-          const btnToolLoad = document.getElementById('tool-select-load');
-          if (btnToolLoad) {
-            document.querySelectorAll('.btn-select-tool').forEach(b => b.classList.remove('active-tab-btn'));
-            btnToolLoad.classList.add('active-tab-btn');
-          }
-        }
+        // (Decoupled active selection tool linking from tabs to preserve selection modes)
 
         // Clear selection if switching tabs to avoid stray highlights (unless going between members and matsec)
         if (tabName !== 'members' && tabName !== 'matsec') {
@@ -142,14 +113,7 @@
         const toolName = btn.id.replace('tool-select-', '');
         window.FrameCanvas.setSelectionTool(toolName);
         
-        // Match top subtabs automatically when switching tools for better UX
-        if (toolName !== 'pan') {
-          const targetTabId = `btn-tab-${toolName === 'node' ? 'nodes' : (toolName === 'member' ? 'members' : (toolName === 'support' ? 'supports' : 'loads'))}`;
-          const tabEl = document.getElementById(targetTabId);
-          if (tabEl && !tabEl.classList.contains('active')) {
-            tabEl.click();
-          }
-        }
+        // (Decoupled active tab switching when selecting tools to support independent drawing/inspection cursors)
       });
     });
 
@@ -1229,14 +1193,6 @@
     });
 
     if (targetRow) {
-      const startSel = document.getElementById('member-input-start');
-      const isSelectInModel = startSel && startSel.value === 'select-in-model';
-      if (!isSelectInModel) {
-        const tabNodes = document.getElementById('btn-tab-nodes');
-        if (tabNodes && !tabNodes.classList.contains('active')) {
-          tabNodes.click();
-        }
-      }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
@@ -1325,13 +1281,6 @@
     });
 
     if (targetRow) {
-      const isMatSecTab = document.getElementById('btn-tab-matsec')?.classList.contains('active');
-      if (!isMatSecTab) {
-        const tabMembers = document.getElementById('btn-tab-members');
-        if (tabMembers && !tabMembers.classList.contains('active')) {
-          tabMembers.click();
-        }
-      }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
@@ -1356,10 +1305,6 @@
     });
 
     if (targetRow) {
-      const tabSupports = document.getElementById('btn-tab-supports');
-      if (tabSupports && !tabSupports.classList.contains('active')) {
-        tabSupports.click();
-      }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
       tableRows.forEach(row => row.classList.remove('selected-row'));
@@ -1380,10 +1325,6 @@
     });
 
     if (targetRow) {
-      const tabLoads = document.getElementById('btn-tab-loads');
-      if (tabLoads && !tabLoads.classList.contains('active')) {
-        tabLoads.click();
-      }
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
       tableRows.forEach(row => row.classList.remove('selected-row'));
