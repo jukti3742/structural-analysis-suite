@@ -1255,6 +1255,7 @@
     startSel.value = 'select-in-model';
     endSel.value = 'select-in-model';
     
+    refreshAllDropdowns();
     updateTablesDisplay();
     window.FrameCanvas.render();
   }
