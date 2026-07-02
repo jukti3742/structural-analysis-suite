@@ -1198,7 +1198,7 @@
 
     const startSel = document.getElementById('member-input-start');
     const endSel = document.getElementById('member-input-end');
-    if (startSel && endSel && startSel.value === 'select-in-model') {
+    if (startSel && endSel && (startSel.value === 'select-in-model' || endSel.value === 'select-in-model')) {
       const selectedIds = Array.from(window.FrameCanvas.selectedNodeIds);
       if (selectedIds.length === 1) {
         startSel.value = selectedIds[0];
