@@ -108,7 +108,7 @@
 
         // Swap properties display (synchronized table selection)
         document.querySelectorAll('.list-tab-content').forEach(c => c.style.display = 'none');
-        const listContainerId = tabName === 'matsec' ? 'list-container-members' : `list-container-${tabName}`;
+        const listContainerId = `list-container-${tabName}`;
         const listContainer = document.getElementById(listContainerId);
         if (listContainer) {
           listContainer.style.display = 'block';
@@ -341,10 +341,10 @@
       }
 
       let k = 1;
-      while (window.FrameModel.members[`M${k}`]) {
+      while (window.FrameModel.members[`B${k}`]) {
         k++;
       }
-      const id = `M${k}`;
+      const id = `B${k}`;
       const section = 'IPE 200';
       const material = 'Steel – E250';
       const beta = parseFloat(document.getElementById('member-input-beta').value) || 0.0;
@@ -767,116 +767,166 @@
       });
     }
 
-    // 2. Members Table
+    // 2. Members Table (Beam Tab - Geometry & Connectivity)
     const tbodyMembers = document.querySelector('#table-members tbody');
     const members = window.FrameModel.getMemberList();
-    if (members.length === 0) {
-      tbodyMembers.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">No members defined.</td></tr>`;
-    } else {
-      tbodyMembers.innerHTML = members.map(m => {
-        const secName = m.sectionName;
-        let secSelect = `<select class="table-unit-select table-section-select" data-member-id="${m.id}" style="width: 100%; border: none; background: transparent; padding: 0; color: var(--text-primary); font-size: 0.75rem; cursor: pointer; outline: none; margin-left: -2px;">`;
-        secSelect += `<option value="Default" ${secName === 'Default' ? 'selected' : ''}>Default</option>`;
-        if (window.getActiveSectionProperties && window.getActiveSectionProperties()) {
-          secSelect += `<option value="Active" ${secName === 'Active' ? 'selected' : ''}>Active</option>`;
-        }
-        
-        // Custom created sections
-        if (Object.keys(window.SectionRegistry).length > 0) {
-          secSelect += `<optgroup label="Custom Created Sections">`;
-          for (const name in window.SectionRegistry) {
-            secSelect += `<option value="${name}" ${secName === name ? 'selected' : ''}>${name}</option>`;
+    if (tbodyMembers) {
+      if (members.length === 0) {
+        tbodyMembers.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">No beams defined.</td></tr>`;
+      } else {
+        tbodyMembers.innerHTML = members.map(m => {
+          const rels = [];
+          if (m.releases) {
+            if (m.releases.Dxj) rels.push('Fx');
+            if (m.releases.Dyj) rels.push('Fy');
+            if (m.releases.Dzj) rels.push('Fz');
+            if (m.releases.Rxj) rels.push('Mx');
+            if (m.releases.Ryj) rels.push('My');
+            if (m.releases.Rzj) rels.push('Mz');
           }
-          secSelect += `</optgroup>`;
-        }
+          const releaseStr = rels.length > 0 ? rels.join(', ') : 'Rigid';
 
-        // Standard profiles from database
-        const db = window.SECTION_DATABASE;
-        if (db) {
-          for (const cat in db) {
-            for (const subcat in db[cat]) {
-              secSelect += `<optgroup label="${cat} - ${subcat}">`;
-              db[cat][subcat].forEach(profile => {
-                secSelect += `<option value="${profile.name}" ${secName === profile.name ? 'selected' : ''}>${profile.name}</option>`;
-              });
-              secSelect += `</optgroup>`;
+          return `
+            <tr>
+              <td><strong>${m.id}</strong></td>
+              <td>${m.startNode}</td>
+              <td>${m.endNode}</td>
+              <td>${releaseStr}</td>
+              <td>
+                <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteMember('${m.id}'); window.initFrameAnalysisView();">Delete</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        // Attach selection synchronization listeners for table-members rows
+        const rows = tbodyMembers.querySelectorAll('tr');
+        rows.forEach(row => {
+          const firstCell = row.querySelector('td');
+          if (firstCell) {
+            const rowMemberId = firstCell.innerText.trim();
+            const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
+            if (isSelected) {
+              row.classList.add('selected-row');
+            } else {
+              row.classList.remove('selected-row');
             }
           }
-        }
-        secSelect += `</select>`;
 
-        const matName = m.materialName || 'Steel – E250';
-        let matSelect = `<select class="table-unit-select table-material-select" data-member-id="${m.id}" style="width: 100%; border: none; background: transparent; padding: 0; color: var(--text-primary); font-size: 0.75rem; cursor: pointer; outline: none; margin-left: -2px;">`;
-        for (const name in window.MaterialDatabase) {
-          matSelect += `<option value="${name}" ${matName === name ? 'selected' : ''}>${name}</option>`;
-        }
-        matSelect += `</select>`;
-
-        return `
-          <tr>
-            <td>${m.id}</td>
-            <td>${m.startNode}</td>
-            <td>${m.endNode}</td>
-            <td>${secSelect}</td>
-            <td>${matSelect}</td>
-            <td>
-              <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteMember('${m.id}'); window.initFrameAnalysisView();">Delete</button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      // Attach change listeners for table selects
-      tbodyMembers.querySelectorAll('.table-section-select').forEach(sel => {
-        sel.addEventListener('change', (e) => {
-          const mId = e.target.getAttribute('data-member-id');
-          if (window.FrameModel.members[mId]) {
-            window.FrameModel.members[mId].sectionName = e.target.value;
-            window.FrameModel.results = null; // Invalidate cache
-            window.FrameCanvas.render();
-            updateMatSecTabUI();
-          }
+          row.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) return;
+            const firstCell = row.querySelector('td');
+            if (firstCell && window.FrameCanvas) {
+              const memberId = firstCell.innerText.trim();
+              const isMatSecTab = document.getElementById('btn-tab-matsec')?.classList.contains('active');
+              const isMulti = e.ctrlKey || e.shiftKey || isMatSecTab;
+              window.FrameCanvas.selectMember(memberId, isMulti);
+            }
+          });
         });
-      });
+      }
+    }
 
-      tbodyMembers.querySelectorAll('.table-material-select').forEach(sel => {
-        sel.addEventListener('change', (e) => {
-          const mId = e.target.getAttribute('data-member-id');
-          if (window.FrameModel.members[mId]) {
-            window.FrameModel.members[mId].materialName = e.target.value;
-            window.FrameModel.results = null; // Invalidate cache
-            window.FrameCanvas.render();
-            updateMatSecTabUI();
+    // 2b. Material / Section Table (Material / Section Tab)
+    const tbodyMatSec = document.querySelector('#table-matsec tbody');
+    if (tbodyMatSec) {
+      if (members.length === 0) {
+        tbodyMatSec.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-secondary);">No beams defined.</td></tr>`;
+      } else {
+        tbodyMatSec.innerHTML = members.map(m => {
+          const secName = m.sectionName;
+          let secSelect = `<select class="table-unit-select table-section-select" data-member-id="${m.id}" style="width: 100%; border: none; background: transparent; padding: 0; color: var(--text-primary); font-size: 0.75rem; cursor: pointer; outline: none; margin-left: -2px;">`;
+          secSelect += `<option value="Default" ${secName === 'Default' ? 'selected' : ''}>Default</option>`;
+          if (window.getActiveSectionProperties && window.getActiveSectionProperties()) {
+            secSelect += `<option value="Active" ${secName === 'Active' ? 'selected' : ''}>Active</option>`;
           }
+          if (Object.keys(window.SectionRegistry).length > 0) {
+            secSelect += `<optgroup label="Custom Created Sections">`;
+            for (const name in window.SectionRegistry) {
+              secSelect += `<option value="${name}" ${secName === name ? 'selected' : ''}>${name}</option>`;
+            }
+            secSelect += `</optgroup>`;
+          }
+          const db = window.SECTION_DATABASE;
+          if (db) {
+            for (const cat in db) {
+              for (const subcat in db[cat]) {
+                secSelect += `<optgroup label="${cat} - ${subcat}">`;
+                db[cat][subcat].forEach(profile => {
+                  secSelect += `<option value="${profile.name}" ${secName === profile.name ? 'selected' : ''}>${profile.name}</option>`;
+                });
+                secSelect += `</optgroup>`;
+              }
+            }
+          }
+          secSelect += `</select>`;
+
+          const matName = m.materialName || 'Steel – E250';
+          let matSelect = `<select class="table-unit-select table-material-select" data-member-id="${m.id}" style="width: 100%; border: none; background: transparent; padding: 0; color: var(--text-primary); font-size: 0.75rem; cursor: pointer; outline: none; margin-left: -2px;">`;
+          for (const name in window.MaterialDatabase) {
+            matSelect += `<option value="${name}" ${matName === name ? 'selected' : ''}>${name}</option>`;
+          }
+          matSelect += `</select>`;
+
+          return `
+            <tr>
+              <td><strong>${m.id}</strong></td>
+              <td>${matSelect}</td>
+              <td>${secSelect}</td>
+            </tr>
+          `;
+        }).join('');
+
+        // Attach change listeners for table selects
+        tbodyMatSec.querySelectorAll('.table-section-select').forEach(sel => {
+          sel.addEventListener('change', (e) => {
+            const mId = e.target.getAttribute('data-member-id');
+            if (window.FrameModel.members[mId]) {
+              window.FrameModel.members[mId].sectionName = e.target.value;
+              window.FrameModel.results = null; // Invalidate cache
+              window.FrameCanvas.render();
+              updateMatSecTabUI();
+            }
+          });
         });
-      });
 
-      // Attach selection synchronization listeners
-      const rows = tbodyMembers.querySelectorAll('tr');
-      rows.forEach(row => {
-        const firstCell = row.querySelector('td');
-        if (firstCell) {
-          const rowMemberId = firstCell.innerText.trim();
-          const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
-          if (isSelected) {
-            row.classList.add('selected-row');
-          } else {
-            row.classList.remove('selected-row');
-          }
-        }
+        tbodyMatSec.querySelectorAll('.table-material-select').forEach(sel => {
+          sel.addEventListener('change', (e) => {
+            const mId = e.target.getAttribute('data-member-id');
+            if (window.FrameModel.members[mId]) {
+              window.FrameModel.members[mId].materialName = e.target.value;
+              window.FrameModel.results = null; // Invalidate cache
+              window.FrameCanvas.render();
+              updateMatSecTabUI();
+            }
+          });
+        });
 
-        row.addEventListener('click', (e) => {
-          if (e.target.classList.contains('delete-btn') || e.target.classList.contains('table-unit-select')) return;
+        // Attach selection synchronization listeners for table-matsec rows
+        const rows = tbodyMatSec.querySelectorAll('tr');
+        rows.forEach(row => {
           const firstCell = row.querySelector('td');
-          if (firstCell && window.FrameCanvas) {
-            const memberId = firstCell.innerText.trim();
-            const isMatSecTab = document.getElementById('btn-tab-matsec')?.classList.contains('active');
-            const isMulti = e.ctrlKey || e.shiftKey || isMatSecTab;
-            
-            window.FrameCanvas.selectMember(memberId, isMulti);
+          if (firstCell) {
+            const rowMemberId = firstCell.innerText.trim();
+            const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
+            if (isSelected) {
+              row.classList.add('selected-row');
+            } else {
+              row.classList.remove('selected-row');
+            }
           }
+
+          row.addEventListener('click', (e) => {
+            if (e.target.classList.contains('table-unit-select')) return;
+            const firstCell = row.querySelector('td');
+            if (firstCell && window.FrameCanvas) {
+              const memberId = firstCell.innerText.trim();
+              const isMulti = e.ctrlKey || e.shiftKey || true;
+              window.FrameCanvas.selectMember(memberId, isMulti);
+            }
+          });
         });
-      });
+      }
     }
 
     // 3. Supports Table
@@ -1356,10 +1406,10 @@
     }
     
     let k = 1;
-    while (window.FrameModel.members[`M${k}`]) {
+    while (window.FrameModel.members[`B${k}`]) {
       k++;
     }
-    const id = `M${k}`;
+    const id = `B${k}`;
     const section = 'IPE 200';
     const material = 'Steel – E250';
     const beta = parseFloat(document.getElementById('member-input-beta').value) || 0.0;
@@ -1389,23 +1439,26 @@
   }
 
   window.selectMemberFromCanvas = function(memberId, isMulti = false) {
-    const tableRows = document.querySelectorAll('#table-members tbody tr');
+    const tables = ['#table-members', '#table-matsec'];
     let targetRow = null;
 
-    tableRows.forEach(row => {
-      const firstCell = row.querySelector('td');
-      if (firstCell) {
-        const rowMemberId = firstCell.innerText.trim();
-        const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
-        if (isSelected) {
-          row.classList.add('selected-row');
-          if (rowMemberId === memberId) {
-            targetRow = row;
+    tables.forEach(tableSelector => {
+      const tableRows = document.querySelectorAll(`${tableSelector} tbody tr`);
+      tableRows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          const rowMemberId = firstCell.innerText.trim();
+          const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
+          if (isSelected) {
+            row.classList.add('selected-row');
+            if (rowMemberId === memberId) {
+              targetRow = row;
+            }
+          } else {
+            row.classList.remove('selected-row');
           }
-        } else {
-          row.classList.remove('selected-row');
         }
-      }
+      });
     });
 
     if (targetRow) {
