@@ -306,21 +306,38 @@
       
       if (isSelectInModelActive) {
         if (!selectedIds || selectedIds.size === 0) {
-          showToast('Please select exactly two nodes to create a beam.');
+          showToast('Please select exactly two nodes to create a beam.', 'error');
           return;
         }
         if (selectedIds.size === 1) {
-          showToast('A second node must be selected to create a beam.');
+          showToast('A second node must be selected to create a beam.', 'error');
           return;
         }
         if (selectedIds.size > 2) {
-          showToast('Please select exactly two nodes to create a beam.');
+          showToast('Please select exactly two nodes to create a beam.', 'error');
           return;
         }
         if (selectedIds.size === 2) {
+          const arr = Array.from(selectedIds);
+          if (!validateProposedBeam(arr[0], arr[1])) {
+            return;
+          }
           createBeamFromModelSelection();
           return;
         }
+      }
+
+      if (!startVal || !endVal || startVal === 'select-in-model' || endVal === 'select-in-model') {
+        showToast('Please specify both Start Node and End Node.', 'error');
+        return;
+      }
+      if (startVal === endVal) {
+        showToast('Start Node and End Node cannot be identical.', 'error');
+        return;
+      }
+      
+      if (!validateProposedBeam(startVal, endVal)) {
+        return;
       }
 
       let k = 1;
@@ -331,15 +348,6 @@
       const section = 'IPE 200';
       const material = 'Steel – E250';
       const beta = parseFloat(document.getElementById('member-input-beta').value) || 0.0;
-
-      if (!startVal || !endVal) {
-        showToast('Please specify both Start Node and End Node.');
-        return;
-      }
-      if (startVal === endVal) {
-        showToast('Start Node and End Node cannot be identical.');
-        return;
-      }
 
       const releases = {
         Dxi: false, Dyi: false, Dzi: false, Rxi: false, Ryi: false, Rzi: false,
@@ -1065,13 +1073,24 @@
   // Helper values for default supports setup
   const True = true, False = false;
 
-  function showToast(message) {
+  function showToast(message, type = 'success') {
     const toast = document.getElementById('toast-notify');
-    const toastMsg = document.getElementById('toast-message');
-    if (toast && toastMsg) {
-      toastMsg.textContent = message;
+    if (toast) {
+      if (type === 'error') {
+        toast.style.background = 'rgba(239, 68, 68, 0.96)';
+        toast.style.color = '#ffffff';
+        toast.style.borderColor = '#ef4444';
+        toast.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="color: #ffffff; flex-shrink: 0;"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14" stroke-linecap="round"/></svg> <span id="toast-message" style="margin-left: 8px;">${message}</span>`;
+      } else {
+        toast.style.background = '';
+        toast.style.color = '';
+        toast.style.borderColor = '';
+        toast.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="color: var(--accent-secondary); flex-shrink: 0;"><path d="M5 13l4 4L19 7" stroke-linecap="round"/></svg> <span id="toast-message" style="margin-left: 8px;">${message}</span>`;
+      }
+      
       toast.classList.add('show');
-      setTimeout(() => {
+      if (toast._timeout) clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => {
         toast.classList.remove('show');
       }, 4000);
     }
@@ -1235,6 +1254,91 @@
       }
     }
   };
+
+  function isCollinear(p1, p2, q1, q2) {
+    const v = { x: p2.x - p1.x, y: p2.y - p1.y, z: p2.z - p1.z };
+    const w = { x: q2.x - q1.x, y: q2.y - q1.y, z: q2.z - q1.z };
+    const u = { x: q1.x - p1.x, y: q1.y - p1.y, z: q1.z - p1.z };
+    
+    const lenV = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+    const lenW = Math.sqrt(w.x*w.x + w.y*w.y + w.z*w.z);
+    const lenU = Math.sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
+    
+    if (lenV < 1e-9 || lenW < 1e-9) return false;
+    
+    const crossVW = {
+      x: v.y * w.z - v.z * w.y,
+      y: v.z * w.x - v.x * w.z,
+      z: v.x * w.y - v.y * w.x
+    };
+    const lenCrossVW = Math.sqrt(crossVW.x*crossVW.x + crossVW.y*crossVW.y + crossVW.z*crossVW.z);
+    if (lenCrossVW / (lenV * lenW) > 1e-5) return false;
+    
+    if (lenU < 1e-9) return true;
+    
+    const crossVU = {
+      x: v.y * u.z - v.z * u.y,
+      y: v.z * u.x - v.x * u.z,
+      z: v.x * u.y - v.y * u.x
+    };
+    const lenCrossVU = Math.sqrt(crossVU.x*crossVU.x + crossVU.y*crossVU.y + crossVU.z*crossVU.z);
+    return (lenCrossVU / (lenV * lenU) <= 1e-5);
+  }
+
+  function validateProposedBeam(startNodeId, endNodeId) {
+    // 1. Duplicate Beam Check
+    const existingMembers = window.FrameModel.getMemberList();
+    const hasDuplicate = existingMembers.some(m => 
+      (m.startNode === startNodeId && m.endNode === endNodeId) || 
+      (m.startNode === endNodeId && m.endNode === startNodeId)
+    );
+    if (hasDuplicate) {
+      showToast('A beam already exists between the selected nodes.', 'error');
+      return false;
+    }
+
+    // 2. Collinear Overlap Check
+    const q1 = window.FrameModel.nodes[startNodeId];
+    const q2 = window.FrameModel.nodes[endNodeId];
+    if (!q1 || !q2) return true;
+
+    for (const m of existingMembers) {
+      const p1 = window.FrameModel.nodes[m.startNode];
+      const p2 = window.FrameModel.nodes[m.endNode];
+      if (!p1 || !p2) continue;
+
+      if (isCollinear(p1, p2, q1, q2)) {
+        const v = { x: p2.x - p1.x, y: p2.y - p1.y, z: p2.z - p1.z };
+        const lenV = Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+        if (lenV < 1e-9) continue;
+
+        const dotVV = v.x*v.x + v.y*v.y + v.z*v.z;
+        
+        const q1_minus_p1 = { x: q1.x - p1.x, y: q1.y - p1.y, z: q1.z - p1.z };
+        const q2_minus_p1 = { x: q2.x - p1.x, y: q2.y - p1.y, z: q2.z - p1.z };
+        
+        const tQ1 = q1_minus_p1.x*v.x + q1_minus_p1.y*v.y + q1_minus_p1.z*v.z;
+        const tQ2 = q2_minus_p1.x*v.x + q2_minus_p1.y*v.y + q2_minus_p1.z*v.z;
+        
+        const aStart = 0;
+        const aEnd = dotVV;
+        const bStart = Math.min(tQ1, tQ2);
+        const bEnd = Math.max(tQ1, tQ2);
+        
+        const overlapStart = Math.max(aStart, bStart);
+        const overlapEnd = Math.min(aEnd, bEnd);
+        
+        if (overlapStart < overlapEnd) {
+          const overlapLen = (overlapEnd - overlapStart) / lenV;
+          if (overlapLen > 1e-4) {
+            showToast('The new beam overlaps with an existing beam.', 'error');
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
 
   function createBeamFromModelSelection() {
     const startSel = document.getElementById('member-input-start');
@@ -1418,6 +1522,7 @@
     }
   }
 
+  window.showToast = showToast;
   window.updateMatSecTabUI = updateMatSecTabUI;
 
 })();
