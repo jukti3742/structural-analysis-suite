@@ -241,9 +241,21 @@
           const nodeMeshes = objectsGroup.children.filter(child => child.userData && child.userData.nodeId);
           const intersects = raycaster.intersectObjects(nodeMeshes);
           const startSel = document.getElementById('member-input-start');
-          const isSelectInModel = startSel && startSel.value === 'select-in-model';
+          const endSel = document.getElementById('member-input-end');
+          const isBeamsTabActive = document.getElementById('btn-tab-members')?.classList.contains('active');
+          const isSelectInModel = isBeamsTabActive && startSel && (startSel.value === 'select-in-model' || endSel.value === 'select-in-model');
           const isMulti = e.ctrlKey || e.shiftKey || isSelectInModel;
           if (intersects.length > 0) {
+            const nodeId = intersects[0].object.userData.nodeId;
+            const hasOneSelected = selectedNodeIds.size === 1;
+            const clickedSelected = selectedNodeIds.has(nodeId);
+            const isClickingSecondWithoutCtrl = isBeamsTabActive && hasOneSelected && !clickedSelected && !(e.ctrlKey || e.shiftKey);
+            if (isClickingSecondWithoutCtrl) {
+              if (window.showToast) {
+                window.showToast('Please hold the Ctrl key while selecting the second node, or press Esc to cancel the current selection.');
+              }
+              return;
+            }
             this.selectNode(intersects[0].object.userData.nodeId, isMulti);
           } else {
             if (!isSelectInModel) {
@@ -260,6 +272,15 @@
             const intersects = raycaster.intersectObjects(nodeMeshes);
             if (intersects.length > 0) {
               const nodeId = intersects[0].object.userData.nodeId;
+              const hasOneSelected = selectedNodeIds.size === 1;
+              const clickedSelected = selectedNodeIds.has(nodeId);
+              const isClickingSecondWithoutCtrl = hasOneSelected && !clickedSelected && !(e.ctrlKey || e.shiftKey);
+              if (isClickingSecondWithoutCtrl) {
+                if (window.showToast) {
+                  window.showToast('Please hold the Ctrl key while selecting the second node, or press Esc to cancel the current selection.');
+                }
+                return;
+              }
               this.selectNode(nodeId, true);
               return;
             }

@@ -52,6 +52,28 @@
   };
 
   function bindUIEvents() {
+    // Global Escape key listener to cancel Select in Model selection
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const startSel = document.getElementById('member-input-start');
+        const endSel = document.getElementById('member-input-end');
+        const isBeamsTab = document.getElementById('btn-tab-members')?.classList.contains('active');
+        
+        if (isBeamsTab && startSel && endSel && (startSel.value !== 'select-in-model' || endSel.value !== 'select-in-model')) {
+          if (window.FrameCanvas) {
+            window.FrameCanvas.selectNode(null, false);
+          }
+          startSel.value = 'select-in-model';
+          endSel.value = 'select-in-model';
+          
+          refreshAllDropdowns();
+          updateTablesDisplay();
+          window.FrameCanvas.render();
+          showToast('Beam selection cancelled.');
+        }
+      }
+    });
+
     // Table Unit dropdown change listeners
     const bindUnitChangeListener = (id, key) => {
       const el = document.getElementById(id);
