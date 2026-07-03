@@ -1093,9 +1093,9 @@
     window.FrameModel.addNode('N4', 4.0, 0.0, 0.0);
 
     // Members
-    window.FrameModel.addMember('Col1', 'N1', 'N2', 'IPE 200', 'Steel – E250');
-    window.FrameModel.addMember('Beam', 'N2', 'N3', 'IPE 200', 'Steel – E250');
-    window.FrameModel.addMember('Col2', 'N4', 'N3', 'IPE 200', 'Steel – E250');
+    window.FrameModel.addMember('B1', 'N1', 'N2', 'IPE 200', 'Steel – E250');
+    window.FrameModel.addMember('B2', 'N2', 'N3', 'IPE 200', 'Steel – E250');
+    window.FrameModel.addMember('B3', 'N4', 'N3', 'IPE 200', 'Steel – E250');
 
     // Supports
     window.FrameModel.addSupport('N1', [True, True, True, True, False, False]); // Stabilized
@@ -1111,7 +1111,7 @@
     
     window.FrameModel.addLoad({
       type: 'MemberDistributedLoad',
-      memberId: 'Beam',
+      memberId: 'B2',
       direction: 'Fy',
       w1: -8000.0, // -8 kN/m vertical UDL
       w2: -8000.0,
