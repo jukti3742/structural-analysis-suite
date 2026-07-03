@@ -279,8 +279,10 @@
       const startVal = startSel.value;
       const endVal = endSel.value;
       
-      if (startVal === 'select-in-model' || endVal === 'select-in-model') {
-        const selectedIds = window.FrameCanvas.selectedNodeIds;
+      const selectedIds = window.FrameCanvas.selectedNodeIds;
+      const isSelectInModelActive = (selectedIds && selectedIds.size > 0) || (startVal === 'select-in-model' || endVal === 'select-in-model');
+      
+      if (isSelectInModelActive) {
         if (!selectedIds || selectedIds.size === 0) {
           showToast('Please select exactly two nodes to create a beam.');
           return;
