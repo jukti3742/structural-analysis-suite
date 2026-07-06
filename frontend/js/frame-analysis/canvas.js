@@ -9,7 +9,9 @@
   let selectedMemberIds = new Set();
   let selectedNodeIds = new Set();
   let selectedSupportId = null;
+  let selectedSupportIds = new Set();
   let selectedLoadIndex = null;
+  let selectedLoadIndexes = new Set();
   let activeSelectionTool = 'node'; // 'node', 'member', 'support', 'load', 'pan'
 
   const CURSORS = {
@@ -26,7 +28,9 @@
     selectedMemberId: null,
     selectedMemberIds: selectedMemberIds,
     selectedSupportId: null,
+    selectedSupportIds: selectedSupportIds,
     selectedLoadIndex: null,
+    selectedLoadIndexes: selectedLoadIndexes,
     activeSelectionTool: 'node',
 
     setSelectionTool: function(toolName) {
@@ -74,6 +78,8 @@
       this.selectedMemberId = null;
       this.selectedSupportId = null;
       this.selectedLoadIndex = null;
+      selectedSupportIds.clear();
+      selectedLoadIndexes.clear();
       this.render();
     },
 
@@ -135,21 +141,113 @@
       }
     },
 
-    selectSupport: function(nodeId) {
-      selectedSupportId = nodeId;
-      this.selectedSupportId = nodeId;
+    selectSupport: function(nodeId, isMulti = false) {
+      if (nodeId === null) {
+        if (!isMulti) {
+          selectedSupportIds.clear();
+          selectedSupportId = null;
+          this.selectedSupportId = null;
+        }
+      } else {
+        if (isMulti) {
+          if (selectedSupportIds.has(nodeId)) {
+            selectedSupportIds.delete(nodeId);
+          } else {
+            selectedSupportIds.add(nodeId);
+          }
+          selectedSupportId = selectedSupportIds.has(nodeId) ? nodeId : null;
+          this.selectedSupportId = selectedSupportId;
+        } else {
+          selectedSupportIds.clear();
+          selectedSupportIds.add(nodeId);
+          selectedSupportId = nodeId;
+          this.selectedSupportId = nodeId;
+        }
+      }
       this.render();
       if (window.selectSupportFromCanvas) {
         window.selectSupportFromCanvas(nodeId);
       }
     },
 
-    selectLoad: function(loadIndex) {
-      selectedLoadIndex = loadIndex;
-      this.selectedLoadIndex = loadIndex;
+    selectLoad: function(loadIndex, isMulti = false) {
+      if (loadIndex === null) {
+        if (!isMulti) {
+          selectedLoadIndexes.clear();
+          selectedLoadIndex = null;
+          this.selectedLoadIndex = null;
+        }
+      } else {
+        if (isMulti) {
+          if (selectedLoadIndexes.has(loadIndex)) {
+            selectedLoadIndexes.delete(loadIndex);
+          } else {
+            selectedLoadIndexes.add(loadIndex);
+          }
+          selectedLoadIndex = selectedLoadIndexes.has(loadIndex) ? loadIndex : null;
+          this.selectedLoadIndex = selectedLoadIndex;
+        } else {
+          selectedLoadIndexes.clear();
+          selectedLoadIndexes.add(loadIndex);
+          selectedLoadIndex = loadIndex;
+          this.selectedLoadIndex = loadIndex;
+        }
+      }
       this.render();
       if (window.selectLoadFromCanvas) {
         window.selectLoadFromCanvas(loadIndex);
+      }
+    },
+
+    selectNodes: function(nodeIds, isMulti = false) {
+      if (!isMulti) {
+        selectedNodeIds.clear();
+      }
+      nodeIds.forEach(id => selectedNodeIds.add(id));
+      selectedNodeId = nodeIds.length > 0 ? nodeIds[nodeIds.length - 1] : null;
+      this.selectedNodeId = selectedNodeId;
+      this.render();
+      if (window.selectNodeFromCanvas) {
+        window.selectNodeFromCanvas(selectedNodeId, true);
+      }
+    },
+
+    selectMembers: function(memberIds, isMulti = false) {
+      if (!isMulti) {
+        selectedMemberIds.clear();
+      }
+      memberIds.forEach(id => selectedMemberIds.add(id));
+      selectedMemberId = memberIds.length > 0 ? memberIds[memberIds.length - 1] : null;
+      this.selectedMemberId = selectedMemberId;
+      this.render();
+      if (window.selectMemberFromCanvas) {
+        window.selectMemberFromCanvas(selectedMemberId, true);
+      }
+    },
+
+    selectSupports: function(nodeIds, isMulti = false) {
+      if (!isMulti) {
+        selectedSupportIds.clear();
+      }
+      nodeIds.forEach(id => selectedSupportIds.add(id));
+      selectedSupportId = nodeIds.length > 0 ? nodeIds[nodeIds.length - 1] : null;
+      this.selectedSupportId = selectedSupportId;
+      this.render();
+      if (window.selectSupportFromCanvas) {
+        window.selectSupportFromCanvas(selectedSupportId);
+      }
+    },
+
+    selectLoads: function(indexes, isMulti = false) {
+      if (!isMulti) {
+        selectedLoadIndexes.clear();
+      }
+      indexes.forEach(idx => selectedLoadIndexes.add(idx));
+      selectedLoadIndex = indexes.length > 0 ? indexes[indexes.length - 1] : null;
+      this.selectedLoadIndex = selectedLoadIndex;
+      this.render();
+      if (window.selectLoadFromCanvas) {
+        window.selectLoadFromCanvas(selectedLoadIndex);
       }
     },
 
@@ -210,7 +308,31 @@
       window.addEventListener('resize', this.onResize.bind(this));
 
       this.pointerDownPos = { x: 0, y: 0 };
+      let isMarqueeActive = false;
+      let marqueeStart = { x: 0, y: 0 };
+
       container.addEventListener('pointerdown', (e) => {
+        if (e.shiftKey) {
+          isMarqueeActive = true;
+          const rect = container.getBoundingClientRect();
+          marqueeStart.x = e.clientX - rect.left;
+          marqueeStart.y = e.clientY - rect.top;
+          if (controls) {
+            controls.enabled = false;
+          }
+          const marquee = document.getElementById('frame-selection-marquee');
+          if (marquee) {
+            marquee.style.left = `${marqueeStart.x}px`;
+            marquee.style.top = `${marqueeStart.y}px`;
+            marquee.style.width = '0px';
+            marquee.style.height = '0px';
+            marquee.style.display = 'block';
+          }
+          this.pointerDownPos.x = e.clientX;
+          this.pointerDownPos.y = e.clientY;
+          return;
+        }
+
         this.pointerDownPos.x = e.clientX;
         this.pointerDownPos.y = e.clientY;
         const canvasEl = container.querySelector('canvas');
@@ -218,11 +340,123 @@
           canvasEl.style.cursor = 'grabbing';
         }
       });
+
       container.addEventListener('pointerup', (e) => {
+        if (isMarqueeActive) {
+          isMarqueeActive = false;
+          const marquee = document.getElementById('frame-selection-marquee');
+          if (marquee) {
+            marquee.style.display = 'none';
+          }
+          if (controls) {
+            controls.enabled = true;
+          }
+          
+          const rect = container.getBoundingClientRect();
+          const currentX = e.clientX - rect.left;
+          const currentY = e.clientY - rect.top;
+          const left = Math.min(marqueeStart.x, currentX);
+          const top = Math.min(marqueeStart.y, currentY);
+          const width = Math.abs(marqueeStart.x - currentX);
+          const height = Math.abs(marqueeStart.y - currentY);
+
+          if (width > 3 || height > 3) {
+            const selectedEntities = [];
+            const isMulti = e.ctrlKey || e.shiftKey;
+            
+            if (activeSelectionTool === 'node') {
+              const nodes = window.FrameModel.getNodeList();
+              nodes.forEach(n => {
+                const vec = new THREE.Vector3(n.x, n.y, n.z);
+                vec.project(camera);
+                const sx = ((vec.x + 1) * rect.width) / 2;
+                const sy = (-(vec.y - 1) * rect.height) / 2;
+                if (sx >= left && sx <= left + width && sy >= top && sy <= top + height) {
+                  selectedEntities.push(n.id);
+                }
+              });
+              if (selectedEntities.length > 0) {
+                this.selectNodes(selectedEntities, isMulti);
+              }
+            } else if (activeSelectionTool === 'member') {
+              const members = window.FrameModel.getMemberList();
+              members.forEach(m => {
+                const nStart = window.FrameModel.nodes[m.startNode];
+                const nEnd = window.FrameModel.nodes[m.endNode];
+                if (nStart && nEnd) {
+                  const checkPoints = [
+                    new THREE.Vector3(nStart.x, nStart.y, nStart.z),
+                    new THREE.Vector3(nEnd.x, nEnd.y, nEnd.z),
+                    new THREE.Vector3((nStart.x + nEnd.x)/2, (nStart.y + nEnd.y)/2, (nStart.z + nEnd.z)/2)
+                  ];
+                  const isAnyInside = checkPoints.some(pt => {
+                    pt.project(camera);
+                    const sx = ((pt.x + 1) * rect.width) / 2;
+                    const sy = (-(pt.y - 1) * rect.height) / 2;
+                    return sx >= left && sx <= left + width && sy >= top && sy <= top + height;
+                  });
+                  if (isAnyInside) {
+                    selectedEntities.push(m.id);
+                  }
+                }
+              });
+              if (selectedEntities.length > 0) {
+                this.selectMembers(selectedEntities, isMulti);
+              }
+            } else if (activeSelectionTool === 'support') {
+              const supports = window.FrameModel.getSupportList();
+              supports.forEach(s => {
+                const node = window.FrameModel.nodes[s.nodeId];
+                if (node) {
+                  const vec = new THREE.Vector3(node.x, node.y, node.z);
+                  vec.project(camera);
+                  const sx = ((vec.x + 1) * rect.width) / 2;
+                  const sy = (-(vec.y - 1) * rect.height) / 2;
+                  if (sx >= left && sx <= left + width && sy >= top && sy <= top + height) {
+                    selectedEntities.push(s.nodeId);
+                  }
+                }
+              });
+              if (selectedEntities.length > 0) {
+                this.selectSupports(selectedEntities, isMulti);
+              }
+            } else if (activeSelectionTool === 'load') {
+              const loads = window.FrameModel.loads;
+              loads.forEach((l, idx) => {
+                let vec = null;
+                if (l.type === 'NodalLoad') {
+                  const node = window.FrameModel.nodes[l.nodeId];
+                  if (node) vec = new THREE.Vector3(node.x, node.y, node.z);
+                } else {
+                  const member = window.FrameModel.members[l.memberId];
+                  if (member) {
+                    const nStart = window.FrameModel.nodes[member.startNode];
+                    const nEnd = window.FrameModel.nodes[member.endNode];
+                    if (nStart && nEnd) {
+                      vec = new THREE.Vector3((nStart.x + nEnd.x)/2, (nStart.y + nEnd.y)/2, (nStart.z + nEnd.z)/2);
+                    }
+                  }
+                }
+                if (vec) {
+                  vec.project(camera);
+                  const sx = ((vec.x + 1) * rect.width) / 2;
+                  const sy = (-(vec.y - 1) * rect.height) / 2;
+                  if (sx >= left && sx <= left + width && sy >= top && sy <= top + height) {
+                    selectedEntities.push(idx);
+                  }
+                }
+              });
+              if (selectedEntities.length > 0) {
+                this.selectLoads(selectedEntities, isMulti);
+              }
+            }
+            return;
+          }
+        }
+
         const dx = Math.abs(e.clientX - this.pointerDownPos.x);
         const dy = Math.abs(e.clientY - this.pointerDownPos.y);
         
-        // Restore cursor based on activeSelectionTool
         const canvasEl = container.querySelector('canvas');
         if (canvasEl) {
           canvasEl.style.cursor = CURSORS[activeSelectionTool] || 'grab';
@@ -263,7 +497,6 @@
             }
           }
         } else if (activeSelectionTool === 'member') {
-          // If in "Select in Model" mode (Members tab is active and dropdown value is "select-in-model"), click selects nodes!
           const isBeamsTabActive = document.getElementById('btn-tab-members')?.classList.contains('active');
           const isSelectInModel = document.getElementById('member-input-start')?.value === 'select-in-model';
           
@@ -299,10 +532,11 @@
         } else if (activeSelectionTool === 'support') {
           const supportMeshes = objectsGroup.children.filter(child => child.userData && child.userData.supportNodeId);
           const intersects = raycaster.intersectObjects(supportMeshes);
+          const isMulti = e.ctrlKey || e.shiftKey;
           if (intersects.length > 0) {
-            this.selectSupport(intersects[0].object.userData.supportNodeId);
+            this.selectSupport(intersects[0].object.userData.supportNodeId, isMulti);
           } else {
-            this.selectSupport(null);
+            this.selectSupport(null, isMulti);
           }
         } else if (activeSelectionTool === 'load') {
           const loadIndexable = objectsGroup.children.filter(child => {
@@ -325,12 +559,33 @@
             }
             if (foundLoadIndex !== null) break;
           }
-          this.selectLoad(foundLoadIndex);
+          const isMulti = e.ctrlKey || e.shiftKey;
+          this.selectLoad(foundLoadIndex, isMulti);
         }
       });
 
       // Hover Tooltip listener
       container.addEventListener('pointermove', (e) => {
+        if (isMarqueeActive) {
+          const rect = container.getBoundingClientRect();
+          const currentX = e.clientX - rect.left;
+          const currentY = e.clientY - rect.top;
+          
+          const left = Math.min(marqueeStart.x, currentX);
+          const top = Math.min(marqueeStart.y, currentY);
+          const width = Math.abs(marqueeStart.x - currentX);
+          const height = Math.abs(marqueeStart.y - currentY);
+          
+          const marquee = document.getElementById('frame-selection-marquee');
+          if (marquee) {
+            marquee.style.left = `${left}px`;
+            marquee.style.top = `${top}px`;
+            marquee.style.width = `${width}px`;
+            marquee.style.height = `${height}px`;
+          }
+          return;
+        }
+
         const rect = container.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -566,7 +821,7 @@
         const isRollerY = restraints[1] === true && restraints[0] === false && restraints[2] === false;
 
         let supportMesh;
-        const isSelected = (s.nodeId === selectedSupportId);
+        const isSelected = (s.nodeId === selectedSupportId || selectedSupportIds.has(s.nodeId));
         const supportColor = isSelected ? 0xf1c40f : (isFixed ? 0xd9534f : (isPinned ? 0xf0ad4e : 0x5bc0de));
 
         if (isFixed) {
@@ -613,7 +868,7 @@
             
             // Draw force arrow
             if (magnitude !== 0) {
-              const isSelected = (index === selectedLoadIndex);
+               const isSelected = (index === selectedLoadIndex || selectedLoadIndexes.has(index));
               const color = isSelected ? 0xf1c40f : (l.direction.startsWith('M') ? 0xcc55ff : 0xff3333);
               const arrowDir = dir.clone().multiplyScalar(magnitude > 0 ? 1 : -1);
               const startPos = new THREE.Vector3(node.x, node.y, node.z).sub(arrowDir.clone().multiplyScalar(1.2));
@@ -651,7 +906,7 @@
               arrowDir = new THREE.Vector3(nEnd.x - nStart.x, nEnd.y - nStart.y, nEnd.z - nStart.z).normalize();
             }
 
-            const isSelected = (index === selectedLoadIndex);
+            const isSelected = (index === selectedLoadIndex || selectedLoadIndexes.has(index));
             const color = isSelected ? 0xf1c40f : 0xffaa00; // Gold if selected, Orange otherwise
             
             const arrowHelper = new THREE.ArrowHelper(
@@ -847,6 +1102,31 @@
     ctx.fillStyle = '#ffffff';
     ctx.fill();
   }
+
+  // Global Esc keydown listener to clear selections
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      FrameCanvas.selectNode(null, false);
+      FrameCanvas.selectMember(null, false);
+      FrameCanvas.selectSupport(null, false);
+      FrameCanvas.selectLoad(null, false);
+      // Ensure all Sets are cleared
+      selectedNodeIds.clear();
+      selectedMemberIds.clear();
+      selectedSupportIds.clear();
+      selectedLoadIndexes.clear();
+      FrameCanvas.render();
+      
+      // Update UI row highlights
+      document.querySelectorAll('.selected-row').forEach(row => {
+        row.classList.remove('selected-row');
+      });
+      
+      if (window.showToast) {
+        window.showToast('Selection cleared.');
+      }
+    }
+  });
 
   // Export globally
   window.FrameCanvas = FrameCanvas;

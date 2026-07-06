@@ -1030,6 +1030,8 @@
             <!-- WebGL 3D Viewport (takes majority of height) -->
             <div class="card cursor-select-node" id="frame-viewport-card" style="position: relative; flex: 1; overflow: hidden; padding: 0; min-height: 380px;">
               <div id="frame-canvas-container" style="width: 100%; height: 100%; background-color: var(--bg-body);"></div>
+              <!-- Selection Marquee Div -->
+              <div id="frame-selection-marquee" style="position: absolute; border: 1.5px dashed var(--accent-secondary, #f1c40f); background: rgba(241, 196, 15, 0.15); pointer-events: none; display: none; z-index: 20;"></div>
               
               <!-- XYZ Axes Indicator corner overlay -->
               <div id="axes-indicator-container" style="position: absolute; top: 12px; right: 12px; width: 65px; height: 65px; z-index: 10; pointer-events: none; background: rgba(30, 30, 40, 0.7); border: 1px solid var(--border-color); border-radius: 8px; backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;">
@@ -1153,330 +1155,689 @@
 
           <!-- Right Panel: Fixed Inputs (Top) + Scrollable Object List (Bottom) -->
           <aside class="frame-right-panel" style="display: flex; flex-direction: column; gap: 15px; height: 100%; overflow: hidden;">
-            
-            <!-- Fixed Input Controls (Swapped dynamically) -->
-            <div class="card" style="flex-shrink: 0; padding: 12px; display: flex; flex-direction: column;" id="frame-input-container">
-              <h4 style="font-size: 0.85rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">Add Input</h4>
+               <div class="card" style="flex-shrink: 0; padding: 12px; display: flex; flex-direction: column;" id="frame-input-container">
               
-              <!-- Segmented Operation Selector -->
-              <div class="frame-tabs">
-                <span class="btn-subtab active" id="btn-tab-nodes" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Nodes</span>
-                <span class="btn-subtab" id="btn-tab-members" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Beams</span>
-                <span class="btn-subtab" id="btn-tab-matsec" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Material / Section</span>
-                <span class="btn-subtab" id="btn-tab-supports" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Supports</span>
-                <span class="btn-subtab" id="btn-tab-loads" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Loads</span>
+              <!-- Top-level main tab selectors -->
+              <div class="frame-main-tabs">
+                <span class="btn-main-tab active" id="btn-main-tab-add-input">Add Input</span>
+                <span class="btn-main-tab" id="btn-main-tab-operations">Operations</span>
               </div>
               
-              <!-- Tab content: Nodes Input -->
-              <div class="frame-tab-content" id="panel-tab-nodes">
-                <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px; font-weight: 600;">Enter Coordinates</p>
-                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                  <div class="input-group" style="flex: 1;">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">X (m)</label>
-                    <input type="number" id="node-input-x" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
-                  </div>
-                  <div class="input-group" style="flex: 1;">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Y (m)</label>
-                    <input type="number" id="node-input-y" value="3.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
-                  </div>
-                  <div class="input-group" style="flex: 1;">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Z (m)</label>
-                    <input type="number" id="node-input-z" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
-                  </div>
+              <!-- Creation Sections (Add Input tab) -->
+              <div id="section-add-input-wrapper" style="display: block;">
+                <!-- Segmented Operation Selector -->
+                <div class="frame-tabs">
+                  <span class="btn-subtab active" id="btn-tab-nodes" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Nodes</span>
+                  <span class="btn-subtab" id="btn-tab-members" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Beams</span>
+                  <span class="btn-subtab" id="btn-tab-matsec" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Material / Section</span>
+                  <span class="btn-subtab" id="btn-tab-supports" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Supports</span>
+                  <span class="btn-subtab" id="btn-tab-loads" style="font-size: 0.7rem; font-weight: 600; cursor: pointer;">Loads</span>
                 </div>
-                <button class="btn btn-primary" id="btn-add-node" style="width: 100%; font-size: 0.75rem; padding: 6px 12px;">Add Node</button>
-              </div>
-
-              <!-- Tab content: Members Input -->
-              <div class="frame-tab-content" id="panel-tab-members" style="display: none;">
-                <h3 style="font-size: 0.95rem; margin-bottom: 2px;">Add Beam</h3>
-                <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px;">Define geometry and connectivity:</p>
                 
-                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                  <div class="input-group" style="flex: 1;">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 1 (Start)</label>
-                    <select id="member-input-start" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
+                <!-- Tab content: Nodes Input -->
+                <div class="frame-tab-content" id="panel-tab-nodes">
+                  <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px; font-weight: 600;">Enter Coordinates</p>
+                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">X (m)</label>
+                      <input type="number" id="node-input-x" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Y (m)</label>
+                      <input type="number" id="node-input-y" value="3.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Z (m)</label>
+                      <input type="number" id="node-input-z" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    </div>
                   </div>
-                  <div class="input-group" style="flex: 1;">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 2 (End)</label>
-                    <select id="member-input-end" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
-                  </div>
+                  <button class="btn btn-primary" id="btn-add-node" style="width: 100%; font-size: 0.85rem; padding: 6px 12px;">Add Node</button>
                 </div>
 
-                <div style="display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-end;">
-                  <!-- Beta Angle -->
-                  <div class="input-group" style="flex: 0.8; min-width: 0;">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Beta Angle (°)</label>
-                    <input type="number" id="member-input-beta" value="0.0" step="5" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;">
+                <!-- Tab content: Members Input -->
+                <div class="frame-tab-content" id="panel-tab-members" style="display: none;">
+                  <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px; font-weight: 600;">Select or Enter Nodes</p>
+                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 1 (N1)</label>
+                      <select id="member-input-start" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                        <option value="select-in-model">Select in Model</option>
+                      </select>
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Node 2 (N2)</label>
+                      <select id="member-input-end" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                        <option value="select-in-model">Select in Model</option>
+                      </select>
+                    </div>
                   </div>
-                  
-                  <!-- Releases checkbox bar -->
-                  <div style="flex: 2.2; min-width: 0;">
-                    <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Releases</span>
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border-radius: 4px; padding: 4px 6px; border: 1px dashed var(--border-color); height: 26px;">
-                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
-                        <input type="checkbox" id="member-release-fx" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
-                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Fx</span>
-                      </div>
-                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
-                        <input type="checkbox" id="member-release-fy" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
-                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Fy</span>
-                      </div>
-                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
-                        <input type="checkbox" id="member-release-fz" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
-                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Fz</span>
-                      </div>
-                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
-                        <input type="checkbox" id="member-release-mx" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
-                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Mx</span>
-                      </div>
-                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
-                        <input type="checkbox" id="member-release-my" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
-                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">My</span>
-                      </div>
-                      <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
-                        <input type="checkbox" id="member-release-mz" style="cursor: pointer; width: 10px; height: 10px; margin: 0;">
-                        <span style="font-size: 0.55rem; font-weight: 600; color: var(--text-secondary); line-height: 1.1;">Mz</span>
+                  <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Beta Angle (°)</label>
+                      <input type="number" id="member-input-beta" value="0.0" step="5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    </div>
+                    <div class="input-group" style="flex: 1.5; display: flex; flex-direction: column;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">End Releases (Node 2)</label>
+                      <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 2px;">
+                        <label style="font-size: 0.65rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0;">
+                          <input type="checkbox" id="member-release-fx" style="margin: 0; width: auto; height: auto;"> Fx
+                        </label>
+                        <label style="font-size: 0.65rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0;">
+                          <input type="checkbox" id="member-release-fy" style="margin: 0; width: auto; height: auto;"> Fy
+                        </label>
+                        <label style="font-size: 0.65rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0;">
+                          <input type="checkbox" id="member-release-fz" style="margin: 0; width: auto; height: auto;"> Fz
+                        </label>
+                        <label style="font-size: 0.65rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0;">
+                          <input type="checkbox" id="member-release-mx" style="margin: 0; width: auto; height: auto;"> Mx
+                        </label>
+                        <label style="font-size: 0.65rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0;">
+                          <input type="checkbox" id="member-release-my" style="margin: 0; width: auto; height: auto;"> My
+                        </label>
+                        <label style="font-size: 0.65rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0;">
+                          <input type="checkbox" id="member-release-mz" style="margin: 0; width: auto; height: auto;"> Mz
+                        </label>
                       </div>
                     </div>
                   </div>
+                  <button class="btn btn-primary" id="btn-add-member" style="width: 100%; font-size: 0.85rem; padding: 6px 12px;">Add Member</button>
                 </div>
 
-                <button class="btn btn-primary" id="btn-add-member" style="width: 100%; font-size: 0.75rem; padding: 6px 12px;">Add Member</button>
+                <!-- Tab content: Material & Section Assignment -->
+                <div class="frame-tab-content" id="panel-tab-matsec" style="display: none;">
+                  <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px; font-weight: 600;">Assign Properties to Selected Beams</p>
+                  
+                  <div style="display: flex; align-items: center; gap: 8px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); padding: 6px 10px; border-radius: 6px; margin-bottom: 10px;">
+                    <span style="font-size: 0.7rem; font-weight: 700; color: var(--accent-primary);">Selected:</span>
+                    <span id="matsec-selected-badge" style="font-size: 0.72rem; font-weight: 700; background: var(--accent-primary); color: white; padding: 2px 6px; border-radius: 4px;">None</span>
+                    <div id="matsec-current-details" style="display: none; font-size: 0.65rem; color: var(--text-secondary); margin-left: auto;">
+                      Mat: <span id="matsec-current-material" style="font-weight: 600;">-</span> | Sec: <span id="matsec-current-section" style="font-weight: 600;">-</span>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Material</label>
+                      <select id="matsec-input-material" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Section</label>
+                      <select id="matsec-input-section" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" id="btn-matsec-assign" disabled style="width: 100%; font-size: 0.85rem; padding: 6px 12px;">Assign Properties</button>
+                </div>
+
+                <!-- Tab content: Supports Input -->
+                <div class="frame-tab-content" id="panel-tab-supports" style="display: none;">
+                  <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px; font-weight: 600;">Apply Boundary Conditions</p>
+                  <div style="display: flex; gap: 8px; margin-bottom: 10px; align-items: flex-end;">
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Target Node</label>
+                      <select id="support-input-node" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                        <option value="">Select Node</option>
+                      </select>
+                    </div>
+                    <div class="input-group" style="flex: 1.5;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Restraint Presets</label>
+                      <select id="support-presets" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                        <option value="pinned">Pinned Support (Free Rot.)</option>
+                        <option value="fixed">Fully Fixed (Rigid)</option>
+                        <option value="roller-y">Roller Support (Dy Restrained)</option>
+                        <option value="custom">Custom (Select below)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="input-group" style="margin-bottom: 10px;">
+                    <label style="font-size: 0.72rem; margin-bottom: 4px; display: block;">Active Restrained DOFs</label>
+                    <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-secondary); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                      <label style="font-size: 0.7rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0; font-weight: 600;">
+                        <input type="checkbox" id="support-dof-dx" checked style="margin: 0; width: auto; height: auto;"> Dx
+                      </label>
+                      <label style="font-size: 0.7rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0; font-weight: 600;">
+                        <input type="checkbox" id="support-dof-dy" checked style="margin: 0; width: auto; height: auto;"> Dy
+                      </label>
+                      <label style="font-size: 0.7rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0; font-weight: 600;">
+                        <input type="checkbox" id="support-dof-dz" checked style="margin: 0; width: auto; height: auto;"> Dz
+                      </label>
+                      <label style="font-size: 0.7rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0; font-weight: 600;">
+                        <input type="checkbox" id="support-dof-rx" style="margin: 0; width: auto; height: auto;"> Rx
+                      </label>
+                      <label style="font-size: 0.7rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0; font-weight: 600;">
+                        <input type="checkbox" id="support-dof-ry" style="margin: 0; width: auto; height: auto;"> Ry
+                      </label>
+                      <label style="font-size: 0.7rem; display: flex; align-items: center; gap: 2px; cursor: pointer; margin: 0; font-weight: 600;">
+                        <input type="checkbox" id="support-dof-rz" style="margin: 0; width: auto; height: auto;"> Rz
+                      </label>
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" id="btn-add-support" style="width: 100%; font-size: 0.85rem; padding: 6px 12px;">Apply Support</button>
+                </div>
+
+                <!-- Tab content: Loads Input -->
+                <div class="frame-tab-content" id="panel-tab-loads" style="display: none;">
+                  <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px; font-weight: 600;">Apply External Loads</p>
+                  <div style="display: flex; gap: 8px; margin-bottom: 10px; align-items: flex-end;">
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Load Target</label>
+                      <select id="load-input-target" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                        <option value="node">Nodal Joint Load</option>
+                        <option value="member">Member Load</option>
+                      </select>
+                    </div>
+                    <div class="input-group" id="load-group-node" style="flex: 1.5;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Target Node</label>
+                      <select id="load-input-node" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                        <option value="">Select Node</option>
+                      </select>
+                    </div>
+                    <div class="input-group" id="load-group-member" style="flex: 1.5; display: none;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Target Beam</label>
+                      <select id="load-input-member" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Load Type</label>
+                      <select id="load-input-type" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                        <option value="Point">Point Force</option>
+                        <option value="UDL">UDL</option>
+                        <option value="Trapezoidal">Trapezoidal</option>
+                      </select>
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Direction</label>
+                      <select id="load-input-direction" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                        <option value="FX">Global X-Axis</option>
+                        <option value="FY">Global Y-Axis (Gravity)</option>
+                        <option value="FZ">Global Z-Axis</option>
+                      </select>
+                    </div>
+                    <div class="input-group" id="load-group-magnitude" style="flex: 1.2;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;" id="lbl-load-mag">Force (kN)</label>
+                      <input type="number" id="load-input-mag" value="-10.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <div class="input-group" id="load-group-magnitude2" style="flex: 1; display: none;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">End w2 (kN/m)</label>
+                      <input type="number" id="load-input-mag2" value="-10.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    </div>
+                    <div class="input-group" id="load-group-offset" style="flex: 1; display: none;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Offset x1 (m)</label>
+                      <input type="number" id="load-input-offset" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    </div>
+                    <div class="input-group" id="load-group-offset2" style="flex: 1; display: none;">
+                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Offset x2 (m)</label>
+                      <input type="number" id="load-input-offset2" value="2.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" id="btn-add-load" style="width: 100%; font-size: 0.85rem; padding: 6px 12px;">Apply Load</button>
+                </div>
               </div>
-
-              <!-- Tab content: Material/Section Assignment -->
-              <div class="frame-tab-content" id="panel-tab-matsec" style="display: none;">
-                <h3 style="font-size: 0.95rem; margin-bottom: 2px;">Assign Material & Section</h3>
-                <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px;">Select beams in 3D viewport or table below to assign properties.</p>
-                
-                <!-- Selected Beams Status -->
-                <div style="background: rgba(241, 196, 15, 0.05); border: 1px solid rgba(241, 196, 15, 0.2); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 0.7rem; font-weight: 600; color: var(--text-secondary);">Selected Beams:</span>
-                    <span id="matsec-selected-badge" style="font-size: 0.7rem; font-weight: 700; color: var(--accent-secondary); background: rgba(241, 196, 15, 0.1); padding: 1px 6px; border-radius: 4px;">None</span>
-                  </div>
-                  <div id="matsec-current-details" style="font-size: 0.68rem; color: var(--text-secondary); margin-top: 6px; border-top: 1px solid var(--border-color); padding-top: 6px; display: none;">
-                    <div style="margin-bottom: 2px;">Assigned Material: <span id="matsec-current-material" style="font-weight: 600; color: var(--text-primary);">--</span></div>
-                    <div>Assigned Section: <span id="matsec-current-section" style="font-weight: 600; color: var(--text-primary);">--</span></div>
-                  </div>
+              
+              <!-- Operations Sections (Operations tab) -->
+              <div id="section-operations-wrapper" style="display: none;">
+                <!-- Segmented Operation Selector -->
+                <div class="frame-tabs">
+                  <span class="btn-subtab active" id="btn-tab-node-ops" style="font-size: 0.7rem; font-weight: 600; cursor: pointer; text-align: center; flex: 1;">Node Operations</span>
+                  <span class="btn-subtab" id="btn-tab-beam-ops" style="font-size: 0.7rem; font-weight: 600; cursor: pointer; text-align: center; flex: 1;">Beam Operations</span>
                 </div>
 
-                <!-- Assignment Form -->
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
-                  <div class="input-group">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Material Grade</label>
-                    <select id="matsec-input-material" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;"></select>
-                  </div>
-                  <div class="input-group">
-                    <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Section Profile</label>
-                    <select id="matsec-input-section" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px;">
-                      <option value="Default">Default</option>
-                    </select>
+                <!-- Tab content: Node Operations Selection -->
+                <div class="frame-tab-content" id="panel-tab-node-ops" style="display: block;">
+                  <p class="section-desc" style="font-size: 0.7rem; margin-bottom: 6px; font-weight: 600;">Select Node Operation:</p>
+                  <div class="op-grid-list">
+                    <button class="op-select-btn active" data-op="node-translate" title="Translate selected nodes along a vector">Translate</button>
+                    <button class="op-select-btn" data-op="node-rotate" title="Rotate selected nodes about an axis and center">Rotate</button>
+                    <button class="op-select-btn" data-op="node-mirror" title="Mirror selected nodes across a coordinate plane">Mirror</button>
+                    <button class="op-select-btn" data-op="node-merge" title="Merge overlapping nodes within a tolerance distance">Merge</button>
+                    <button class="op-select-btn" data-op="node-renumber" title="Renumber node IDs sequentially starting from an index">Renumber</button>
+                    <button class="op-select-btn" data-op="node-delete" title="Delete selected nodes from the model">Delete</button>
                   </div>
                 </div>
-                
-                <button class="btn btn-primary" id="btn-matsec-assign" style="width: 100%; font-size: 0.75rem; padding: 6px 12px;" disabled>Assign to Selected Beams</button>
-              </div>
 
-              <!-- Tab content: Supports Input -->
-              <div class="frame-tab-content" id="panel-tab-supports" style="display: none;">
-                <h3 style="font-size: 1rem; margin-bottom: 2px;">Configure Support</h3>
-                <p class="section-desc" style="font-size: 0.75rem; margin-bottom: 12px;">Apply boundary conditions.</p>
-                <div class="input-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                  <div class="input-group" style="grid-column: span 2;">
-                    <label style="font-size: 0.75rem;">Target Node</label>
-                    <select id="support-input-node" class="form-control" style="font-size: 0.8rem; height: 32px;"></select>
-                  </div>
-                  <div class="input-group" style="grid-column: span 2;">
-                    <label style="font-size: 0.75rem;">Preset</label>
-                    <select id="support-presets" class="form-control" style="font-size: 0.8rem; height: 32px;">
-                      <option value="pinned">Pinned (DX, DY, DZ)</option>
-                      <option value="fixed">Fixed (All DOFs)</option>
-                      <option value="roller-y">Roller (DY only)</option>
-                      <option value="custom">Custom (Checkboxes)</option>
-                    </select>
+                <!-- Tab content: Beam Operations Selection -->
+                <div class="frame-tab-content" id="panel-tab-beam-ops" style="display: none;">
+                  <p class="section-desc" style="font-size: 0.7rem; margin-bottom: 6px; font-weight: 600;">Select Beam Operation:</p>
+                  <div class="op-grid-list">
+                    <button class="op-select-btn" data-op="beam-split" title="Split selected beam segment into two parts">Split</button>
+                    <button class="op-select-btn" data-op="beam-merge" title="Merge two adjacent collinear connected beams">Merge</button>
+                    <button class="op-select-btn" data-op="beam-extend" title="Extend selected beam element along its vector path">Extend</button>
+                    <button class="op-select-btn" data-op="beam-trim" title="Trim/shorten selected beam element along its vector path">Trim</button>
+                    <button class="op-select-btn" data-op="beam-reverse" title="Reverse orientation (swap Start Node and End Node) of selected beams">Reverse</button>
+                    <button class="op-select-btn" data-op="beam-mirror" title="Mirror selected beams across a coordinate plane">Mirror</button>
+                    <button class="op-select-btn" data-op="beam-delete" title="Delete selected beams from the model">Delete</button>
                   </div>
                 </div>
-                <!-- DOF Checkboxes -->
-                <div style="margin-top: 10px; border-top: 1px solid var(--border-color); padding-top: 8px;">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                    <label class="switch-label" style="font-size: 0.75rem;"><span>DX</span><input type="checkbox" id="support-dof-dx" checked></label>
-                    <label class="switch-label" style="font-size: 0.75rem;"><span>DY</span><input type="checkbox" id="support-dof-dy" checked></label>
-                    <label class="switch-label" style="font-size: 0.75rem;"><span>DZ</span><input type="checkbox" id="support-dof-dz" checked></label>
-                    <label class="switch-label" style="font-size: 0.75rem;"><span>RX</span><input type="checkbox" id="support-dof-rx"></label>
-                    <label class="switch-label" style="font-size: 0.75rem;"><span>RY</span><input type="checkbox" id="support-dof-ry"></label>
-                    <label class="switch-label" style="font-size: 0.75rem;"><span>RZ</span><input type="checkbox" id="support-dof-rz"></label>
-                  </div>
-                </div>
-                <button class="btn btn-primary" id="btn-add-support" style="width: 100%; margin-top: 12px; font-size: 0.85rem; padding: 6px 12px;">Assign Support</button>
-              </div>
-
-              <!-- Tab content: Loads Input -->
-              <div class="frame-tab-content" id="panel-tab-loads" style="display: none;">
-                <h3 style="font-size: 1rem; margin-bottom: 2px;">Apply Load</h3>
-                <p class="section-desc" style="font-size: 0.75rem; margin-bottom: 12px;">Define load type and force value.</p>
-                <div class="input-grid" style="grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                  <div class="input-group">
-                    <label style="font-size: 0.75rem;">Target</label>
-                    <select id="load-input-target" class="form-control" style="font-size: 0.8rem; height: 32px;">
-                      <option value="node">Node</option>
-                      <option value="member">Member</option>
-                    </select>
-                  </div>
-                  <div class="input-group" id="load-group-node">
-                    <label style="font-size: 0.75rem;">Node</label>
-                    <select id="load-input-node" class="form-control" style="font-size: 0.8rem; height: 32px;"></select>
-                  </div>
-                  <div class="input-group" id="load-group-member" style="display: none;">
-                    <label style="font-size: 0.75rem;">Member</label>
-                    <select id="load-input-member" class="form-control" style="font-size: 0.8rem; height: 32px;"></select>
-                  </div>
-                  <div class="input-group">
-                    <label style="font-size: 0.75rem;">Profile</label>
-                    <select id="load-input-type" class="form-control" style="font-size: 0.8rem; height: 32px;" disabled>
-                      <option value="Point">Point Force</option>
-                      <option value="UDL">UDL</option>
-                      <option value="Trapezoidal">Trapezoidal</option>
-                    </select>
-                  </div>
-                  <div class="input-group">
-                    <label style="font-size: 0.75rem;">Direction</label>
-                    <select id="load-input-direction" class="form-control" style="font-size: 0.8rem; height: 32px;">
-                      <option value="FY">Global FY</option>
-                      <option value="FX">Global FX</option>
-                      <option value="FZ">Global FZ</option>
-                      <option value="MZ">Global MZ</option>
-                    </select>
-                  </div>
-                  <div class="input-group" id="load-group-magnitude">
-                    <label style="font-size: 0.75rem;" id="lbl-load-mag">Force (kN)</label>
-                    <input type="number" id="load-input-mag" value="-10.0" step="1.0" class="form-control" style="font-size: 0.8rem; height: 32px;">
-                  </div>
-                  <div class="input-group" id="load-group-magnitude2" style="display: none;">
-                    <label style="font-size: 0.75rem;">End w2 (kN/m)</label>
-                    <input type="number" id="load-input-mag2" value="-10.0" step="1.0" class="form-control" style="font-size: 0.8rem; height: 32px;">
-                  </div>
-                  <div class="input-group" id="load-group-offset" style="display: none;">
-                    <label style="font-size: 0.75rem;">Offset x1 (m)</label>
-                    <input type="number" id="load-input-offset" value="0.0" step="0.5" class="form-control" style="font-size: 0.8rem; height: 32px;">
-                  </div>
-                  <div class="input-group" id="load-group-offset2" style="display: none;">
-                    <label style="font-size: 0.75rem;">Offset x2 (m)</label>
-                    <input type="number" id="load-input-offset2" value="2.0" step="0.5" class="form-control" style="font-size: 0.8rem; height: 32px;">
-                  </div>
-                </div>
-                <button class="btn btn-primary" id="btn-add-load" style="width: 100%; margin-top: 12px; font-size: 0.85rem; padding: 6px 12px;">Apply Load</button>
               </div>
 
             </div>
 
-            <!-- Scrollable Object Lists Section (Takes remaining height) -->
-            <div class="card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 12px;">
-              <h4 id="active-elements-title" style="font-size: 0.85rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">Properties / Informations</h4>
+            <!-- Scrollable Object Lists / Operation Parameters Section -->
+            <div class="card" id="operations-parameters-card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 12px;">
+              
+              <!-- Properties / Informations Panel -->
+              <div id="panel-properties-info" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+                <h4 id="active-elements-title" style="font-size: 0.85rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">Properties / Informations</h4>
 
-              <!-- Scrollable Lists container -->
-              <div style="flex: 1; overflow-y: auto;" id="frame-list-tables-container">
-                
-                <!-- Nodes table -->
-                <div id="list-container-nodes" class="list-tab-content">
-                  <table class="data-table" id="table-nodes" style="font-size: 0.75rem;">
-                    <thead>
-                      <tr><th>ID</th><th>X</th><th>Y</th><th>Z</th><th></th></tr>
-                      <tr class="unit-row">
-                        <th></th>
-                        <th>
-                          <select class="table-unit-select" id="node-unit-x">
-                            <option value="m">m</option>
-                            <option value="cm">cm</option>
-                            <option value="mm">mm</option>
-                            <option value="in">in</option>
-                            <option value="ft">ft</option>
-                          </select>
-                        </th>
-                        <th>
-                          <select class="table-unit-select" id="node-unit-y">
-                            <option value="m">m</option>
-                            <option value="cm">cm</option>
-                            <option value="mm">mm</option>
-                            <option value="in">in</option>
-                            <option value="ft">ft</option>
-                          </select>
-                        </th>
-                        <th>
-                          <select class="table-unit-select" id="node-unit-z">
-                            <option value="m">m</option>
-                            <option value="cm">cm</option>
-                            <option value="mm">mm</option>
-                            <option value="in">in</option>
-                            <option value="ft">ft</option>
-                          </select>
-                        </th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
+                <!-- Scrollable Lists container -->
+                <div style="flex: 1; overflow-y: auto;" id="frame-list-tables-container">
+                  
+                  <!-- Nodes table -->
+                  <div id="list-container-nodes" class="list-tab-content">
+                    <table class="data-table" id="table-nodes" style="font-size: 0.75rem;">
+                      <thead>
+                        <tr><th>ID</th><th>X</th><th>Y</th><th>Z</th><th></th></tr>
+                        <tr class="unit-row">
+                          <th></th>
+                          <th>
+                            <select class="table-unit-select" id="node-unit-x">
+                              <option value="m">m</option>
+                              <option value="cm">cm</option>
+                              <option value="mm">mm</option>
+                              <option value="in">in</option>
+                              <option value="ft">ft</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select" id="node-unit-y">
+                              <option value="m">m</option>
+                              <option value="cm">cm</option>
+                              <option value="mm">mm</option>
+                              <option value="in">in</option>
+                              <option value="ft">ft</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select" id="node-unit-z">
+                              <option value="m">m</option>
+                              <option value="cm">cm</option>
+                              <option value="mm">mm</option>
+                              <option value="in">in</option>
+                              <option value="ft">ft</option>
+                            </select>
+                          </th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+
+                  <!-- Members table -->
+                  <div id="list-container-members" class="list-tab-content" style="display: none;">
+                    <table class="data-table" id="table-members" style="font-size: 0.75rem;">
+                      <thead>
+                        <tr><th>ID</th><th>N1</th><th>N2</th><th>Releases</th><th></th></tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+
+                  <!-- Material & Section table -->
+                  <div id="list-container-matsec" class="list-tab-content" style="display: none;">
+                    <table class="data-table" id="table-matsec" style="font-size: 0.75rem;">
+                      <thead>
+                        <tr><th>ID</th><th>Material</th><th>Section</th></tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+
+                  <!-- Supports table -->
+                  <div id="list-container-supports" class="list-tab-content" style="display: none;">
+                    <table class="data-table" id="table-supports" style="font-size: 0.75rem;">
+                      <thead>
+                        <tr><th>Node</th><th>Restraints</th><th></th></tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+
+                  <!-- Loads table -->
+                  <div id="list-container-loads" class="list-tab-content" style="display: none;">
+                    <table class="data-table" id="table-loads" style="font-size: 0.75rem;">
+                      <thead>
+                        <tr>
+                          <th>Target</th>
+                          <th>Type</th>
+                          <th>Dir</th>
+                          <th>
+                            <span style="display: flex; align-items: center; gap: 4px;">
+                              Value
+                              <select class="table-unit-select" id="load-unit-val">
+                                <option value="kN">kN</option>
+                                <option value="N">N</option>
+                                <option value="kip">kip</option>
+                                <option value="lb">lb</option>
+                              </select>
+                            </span>
+                          </th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+
                 </div>
-
-                <!-- Members table -->
-                <div id="list-container-members" class="list-tab-content" style="display: none;">
-                  <table class="data-table" id="table-members" style="font-size: 0.75rem;">
-                    <thead>
-                      <tr><th>ID</th><th>Node 1</th><th>Node 2</th><th>Releases</th><th></th></tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
-
-                <!-- Material / Section table -->
-                <div id="list-container-matsec" class="list-tab-content" style="display: none;">
-                  <table class="data-table" id="table-matsec" style="font-size: 0.75rem;">
-                    <thead>
-                      <tr><th>ID</th><th>Material</th><th>Section</th></tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
-
-                <!-- Supports table -->
-                <div id="list-container-supports" class="list-tab-content" style="display: none;">
-                  <table class="data-table" id="table-supports" style="font-size: 0.75rem;">
-                    <thead>
-                      <tr><th>Node</th><th>Restraints</th><th></th></tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
-
-                <!-- Loads table -->
-                <div id="list-container-loads" class="list-tab-content" style="display: none;">
-                  <table class="data-table" id="table-loads" style="font-size: 0.75rem;">
-                    <thead>
-                      <tr><th>Target</th><th>Type</th><th>Dir</th><th>Val</th><th></th></tr>
-                      <tr class="unit-row">
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th>
-                          <select class="table-unit-select" id="load-unit-val">
-                            <option value="kN">kN</option>
-                            <option value="N">N</option>
-                            <option value="lbf">lbf</option>
-                            <option value="kip">kip</option>
-                            <option value="kg">kg</option>
-                            <option value="MTon">MTon</option>
-                          </select>
-                        </th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
-
               </div>
+
+              <!-- Operation Parameters Panel -->
+              <div id="panel-operation-params" style="display: none; flex-direction: column; flex: 1; overflow: hidden;">
+                <h4 style="font-size: 0.85rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px;">Operation Parameters</h4>
+                
+                <!-- Dynamic Parameter Windows -->
+                <div style="flex: 1; overflow-y: auto; padding-right: 2px;" id="op-params-container">
+                  
+                  <!-- Node Translate Params -->
+                  <div id="op-params-node-translate" class="op-param-section" style="display: flex;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Translate selected nodes along a vector.</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Translation dx (m)</label>
+                        <input type="number" id="param-node-tx" value="1.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Translation dy (m)</label>
+                        <input type="number" id="param-node-ty" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Translation dz (m)</label>
+                        <input type="number" id="param-node-tz" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Number of Copies</label>
+                        <input type="number" id="param-node-tcopies" value="1" min="1" step="1" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Mode</label>
+                        <select id="param-node-tmode" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                          <option value="copy">Copy Elements</option>
+                          <option value="move">Move Elements</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-node-translate" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Apply</button>
+                      <button class="btn btn-secondary" id="btn-reset-node-translate" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Node Rotate Params -->
+                  <div id="op-params-node-rotate" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Rotate selected nodes about an axis and center point.</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                      <div class="input-group" style="flex: 1.2;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Rotation Axis</label>
+                        <select id="param-node-raxis" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                          <option value="Z">Z-Axis (Vertical)</option>
+                          <option value="X">X-Axis</option>
+                          <option value="Y">Y-Axis</option>
+                        </select>
+                      </div>
+                      <div class="input-group" style="flex: 0.8;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Angle (deg)</label>
+                        <input type="number" id="param-node-rangle" value="90" step="5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Center cx (m)</label>
+                        <input type="number" id="param-node-rcx" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Center cy (m)</label>
+                        <input type="number" id="param-node-rcy" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Center cz (m)</label>
+                        <input type="number" id="param-node-rcz" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Number of Copies</label>
+                        <input type="number" id="param-node-rcopies" value="1" min="1" step="1" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Mode</label>
+                        <select id="param-node-rmode" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                          <option value="copy">Copy Elements</option>
+                          <option value="move">Move Elements</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-node-rotate" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Apply</button>
+                      <button class="btn btn-secondary" id="btn-reset-node-rotate" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Node Mirror Params -->
+                  <div id="op-params-node-mirror" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Mirror selected nodes across a coordinate plane.</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Mirror Plane</label>
+                        <select id="param-node-mplane" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                          <option value="YZ">YZ Plane (Mirror X)</option>
+                          <option value="XZ">XZ Plane (Mirror Y)</option>
+                          <option value="XY">XY Plane (Mirror Z)</option>
+                        </select>
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Plane Offset Coord. (m)</label>
+                        <input type="number" id="param-node-mcoord" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 8px;">
+                      <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Mode</label>
+                      <select id="param-node-mmode" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                        <option value="copy">Keep Original (Copy)</option>
+                        <option value="move">Move Original (Move)</option>
+                      </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-node-mirror" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Apply</button>
+                      <button class="btn btn-secondary" id="btn-reset-node-mirror" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Node Merge Params -->
+                  <div id="op-params-node-merge" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Merge overlapping nodes into single nodes based on a tolerance distance.</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Merge Tolerance (m)</label>
+                        <input type="number" id="param-node-mergetol" value="0.001" step="0.001" min="0.0001" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Target Selection</label>
+                        <select id="param-node-mergetarget" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                          <option value="selected">Selected Nodes</option>
+                          <option value="all">All Nodes in Model</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-node-merge" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Apply</button>
+                      <button class="btn btn-secondary" id="btn-reset-node-merge" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Node Renumber Params -->
+                  <div id="op-params-node-renumber" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Renumber node IDs sequentially starting from a given index.</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Start Index</label>
+                        <input type="number" id="param-node-renumstart" value="1" min="1" step="1" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Sorting Axis</label>
+                        <select id="param-node-renumsort" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                          <option value="X">Left-to-Right (X)</option>
+                          <option value="Y">Bottom-to-Top (Y)</option>
+                          <option value="Z">Front-to-Back (Z)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-node-renumber" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Apply</button>
+                      <button class="btn btn-secondary" id="btn-reset-node-renumber" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Node Delete Params -->
+                  <div id="op-params-node-delete" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Delete selected nodes from the model. Connected beams will also be removed.</p>
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px; border-radius: 6px;">
+                      <input type="checkbox" id="param-node-delconfirm" style="width: auto; height: auto; margin: 0; cursor: pointer;">
+                      <label for="param-node-delconfirm" style="font-size: 0.72rem; margin: 0; cursor: pointer; color: #f87171; font-weight: 600;">Confirm node deletion</label>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                      <button class="btn btn-danger" id="btn-apply-node-delete" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Delete Selected Nodes</button>
+                      <button class="btn btn-secondary" id="btn-reset-node-delete" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Beam Split Params -->
+                  <div id="op-params-beam-split" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Divide the selected beam element into segments.</p>
+                    <div class="input-group" style="margin-bottom: 6px;">
+                      <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Split Method</label>
+                      <select id="param-beam-splitmethod" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                        <option value="half">Split in Half (50%)</option>
+                        <option value="ratio">Split by Ratio (0.0 to 1.0)</option>
+                        <option value="distance">Split by Distance (m)</option>
+                      </select>
+                    </div>
+                    <div class="input-group" id="param-beam-splitval-group" style="margin-bottom: 8px; display: none;">
+                      <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;" id="param-beam-splitval-label">Value</label>
+                      <input type="number" id="param-beam-splitval" value="0.5" step="0.1" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-beam-split" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Apply</button>
+                      <button class="btn btn-secondary" id="btn-reset-beam-split" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Beam Merge Params -->
+                  <div id="op-params-beam-merge" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Merge collinear connected beams into a single beam element.</p>
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px; background: rgba(99,102,241,0.06); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">This merges two adjacent collinear members that share a common node, removing the intermediate node (if it has no other connections).</p>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-beam-merge" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Merge Beams</button>
+                      <button class="btn btn-secondary" id="btn-reset-beam-merge" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Beam Extend Params -->
+                  <div id="op-params-beam-extend" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Extend the selected beam element along its vector path.</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Extend Length (m)</label>
+                        <input type="number" id="param-beam-extlen" value="1.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">End to Extend</label>
+                        <select id="param-beam-extnode" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                          <option value="end">End Node (Node 2)</option>
+                          <option value="start">Start Node (Node 1)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-beam-extend" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Apply</button>
+                      <button class="btn btn-secondary" id="btn-reset-beam-extend" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Beam Trim Params -->
+                  <div id="op-params-beam-trim" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Trim/shorten the selected beam element along its vector path.</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Trim Length (m)</label>
+                        <input type="number" id="param-beam-trimlen" value="1.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">End to Trim</label>
+                        <select id="param-beam-trimnode" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                          <option value="end">End Node (Node 2)</option>
+                          <option value="start">Start Node (Node 1)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-beam-trim" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Apply</button>
+                      <button class="btn btn-secondary" id="btn-reset-beam-trim" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Beam Reverse Params -->
+                  <div id="op-params-beam-reverse" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Reverse the orientation of selected beams (swaps Start Node and End Node and adjusts releases accordingly).</p>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-beam-reverse" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Reverse Orientation</button>
+                      <button class="btn btn-secondary" id="btn-reset-beam-reverse" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Beam Mirror Params -->
+                  <div id="op-params-beam-mirror" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Mirror selected beams across a coordinate plane.</p>
+                    <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Mirror Plane</label>
+                        <select id="param-beam-mplane" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                          <option value="YZ">YZ Plane (Mirror X)</option>
+                          <option value="XZ">XZ Plane (Mirror Y)</option>
+                          <option value="XY">XY Plane (Mirror Z)</option>
+                        </select>
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Plane Offset Coord. (m)</label>
+                        <input type="number" id="param-beam-mcoord" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+                      </div>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 8px;">
+                      <label style="font-size: 0.7rem; display: block; margin-bottom: 2px;">Mode</label>
+                      <select id="param-beam-mmode" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color);">
+                        <option value="copy">Keep Original (Copy)</option>
+                        <option value="move">Move Original (Move)</option>
+                      </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+                      <button class="btn btn-primary" id="btn-apply-beam-mirror" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Apply</button>
+                      <button class="btn btn-secondary" id="btn-reset-beam-mirror" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+
+                  <!-- Beam Delete Params -->
+                  <div id="op-params-beam-delete" class="op-param-section" style="display: none;">
+                    <p style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;">Delete selected beams from the model.</p>
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px; border-radius: 6px;">
+                      <input type="checkbox" id="param-beam-delconfirm" style="width: auto; height: auto; margin: 0; cursor: pointer;">
+                      <label for="param-beam-delconfirm" style="font-size: 0.72rem; margin: 0; cursor: pointer; color: #f87171; font-weight: 600;">Confirm beam deletion</label>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                      <button class="btn btn-danger" id="btn-apply-beam-delete" style="width: 100%; padding: 6px 12px; font-size: 0.8rem;">Delete Selected Beams</button>
+                      <button class="btn btn-secondary" id="btn-reset-beam-delete" style="width: 100%; padding: 5px 12px; font-size: 0.78rem;">Reset</button>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+
             </div>
+
+
 
             <!-- Action buttons -->
             <div class="card" style="flex-shrink: 0; padding: 12px; display: flex; flex-direction: column; gap: 8px;">

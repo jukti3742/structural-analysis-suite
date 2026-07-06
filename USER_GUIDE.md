@@ -18,6 +18,7 @@ Welcome to the **Apex Structural Analysis Suite User Guide**. This document prov
 11. [Report Generation & Export](#11-report-generation--export)
 12. [Keyboard Shortcuts Quick Reference](#12-keyboard-shortcuts-quick-reference)
 13. [Errors, Warnings, & Validations Index](#13-errors-warnings--validations-index)
+14. [Operations & CAD Workflows](#14-operations--cad-workflows)
 
 ---
 
@@ -336,3 +337,93 @@ Here is a reference list of warning alerts and their resolution steps:
 * **"Start Node and End Node cannot be identical."**
   - *Meaning*: A member cannot start and end at the same node.
   - *Resolution*: Choose two distinct node IDs.
+
+---
+
+## 14. Operations & CAD Workflows
+
+### Purpose
+To perform advanced geometric transformations on nodes and modify beam topology inside the modeling workspace using a unified, scalable two-window interface.
+
+### The Two-Window Layout
+* **Top Window (Fixed Selection)**: Fixed menu showing the list of available CAD operations for the active tab (e.g. Node Operations or Beam Operations). Selecting an operation immediately configures the bottom window.
+* **Bottom Window (Operation Parameters)**: Dynamically replaces the Properties/Informations panel. Displays the parameters and inputs specific to the active operation, alongside the **Apply** action button.
+
+### Node Operations
+#### 1. Translate
+1. Select node(s) in the 3D viewport.
+2. In the top window, select **Translate**.
+3. In the bottom parameters panel, input the translation offset vector **dx (m)**, **dy (m)**, and **dz (m)**.
+4. Set the **Number of Copies** and choose the **Mode**:
+   - **Copy Elements**: Spawns translated clones (duplicate coordinates are skipped).
+   - **Move Elements**: Relocates original node coordinates.
+5. Click **Apply**.
+
+#### 2. Rotate
+1. Select node(s) in the 3D viewport.
+2. Select **Rotate** in the top window.
+3. Input the **Rotation Axis** (X, Y, or Z), rotation **Angle (deg)**, and rotation center coordinates **cx, cy, cz**.
+4. Set the copies and select the mode (Copy vs Move).
+5. Click **Apply**.
+
+#### 3. Mirror
+1. Select node(s) in the 3D viewport.
+2. Select **Mirror** in the top window.
+3. Choose the **Mirror Plane** (YZ plane, XZ plane, or XY plane) and specify the plane offset coordinate.
+4. Set the mode (Copy vs Move) and click **Apply**.
+
+#### 4. Merge
+1. Select **Merge** in the top window.
+2. Specify the **Merge Tolerance (m)**.
+3. Select the target (merge only **Selected Nodes** or **All Nodes**).
+4. Click **Apply**. Nodes closer than the tolerance are merged, and member connectivity is updated.
+
+#### 5. Renumber
+1. Select **Renumber** in the top window.
+2. Specify the **Start Index** and sorting direction (X, Y, or Z).
+3. Click **Apply** to sequentially rename all nodes (e.g. `N1`, `N2`...).
+
+#### 6. Delete
+1. Select node(s) in the 3D viewport.
+2. Select **Delete** in the top window.
+3. Check the **Confirm node deletion** box and click the action button to remove the nodes and all connected beams.
+
+---
+
+### Beam Operations
+#### 1. Split
+1. Select exactly one beam element.
+2. Select **Split** in the top window.
+3. Choose the split method (Half, Ratio, or Distance) and value.
+4. Click **Apply**.
+
+#### 2. Merge
+1. Select exactly two adjacent collinear beam elements.
+2. Select **Merge** in the top window and click **Merge Beams**. The intermediate connection node is automatically removed if it has no other connectivity.
+
+#### 3. Extend
+1. Select exactly one beam element.
+2. Select **Extend** in the top window, specify the **Extend Length (m)** and choose which end to extend (Start or End node).
+3. Click **Apply**.
+
+#### 4. Trim
+1. Select exactly one beam element.
+2. Select **Trim** in the top window, specify the trim length, and choose which node end to trim.
+3. Click **Apply** (length must be less than member length).
+
+#### 5. Reverse Orientation
+1. Select one or more beam elements.
+2. Select **Reverse Orientation** in the top window.
+3. Click the action button to swap start/end node assignments and reverse active releases.
+
+#### 6. Mirror
+1. Select beam element(s).
+2. Select **Mirror** in the top window.
+3. Select mirror plane, coordinate offset, and mode (Copy vs Move).
+4. Click **Apply**.
+
+#### 7. Delete
+1. Select beam element(s).
+2. Select **Delete** in the top window.
+3. Check the confirmation checkbox and click the action button to delete selected members.
+

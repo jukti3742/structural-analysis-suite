@@ -1505,6 +1505,94 @@ input:checked + .switch-slider:before {
   box-sizing: border-box !important;
 }
 
+/* Top-level panel tabs (Add Input / Operations) */
+.frame-main-tabs {
+  display: flex !important;
+  gap: 8px !important;
+  width: 100% !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  padding-bottom: 6px !important;
+  margin-bottom: 10px !important;
+}
+
+.btn-main-tab {
+  flex: 1 !important;
+  text-align: center !important;
+  padding: 6px 12px !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  border-radius: 6px !important;
+  border: 1px solid transparent !important;
+  background-color: transparent !important;
+  color: var(--text-secondary) !important;
+  transition: all 0.2s ease !important;
+  user-select: none !important;
+}
+
+.btn-main-tab:hover {
+  color: var(--text-primary) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.btn-main-tab.active {
+  background-color: var(--accent-primary) !important;
+  color: white !important;
+  border-color: var(--accent-primary) !important;
+}
+
+[data-theme="dark"] .btn-main-tab.active {
+  background-color: var(--accent-primary) !important;
+  color: white !important;
+}
+
+/* Operations Selector & Dynamic Parameter Window Styles */
+.op-grid-list {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)) !important;
+  gap: 6px !important;
+  margin-bottom: 10px !important;
+  width: 100% !important;
+}
+
+.op-select-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 8px 4px !important;
+  height: 42px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-secondary) !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+}
+
+.op-select-btn:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+.op-select-btn.active {
+  background-color: var(--accent-primary) !important;
+  color: white !important;
+  border-color: var(--accent-primary) !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
+}
+
+.op-param-section {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Active Model Lists Subtabs styles */
 .frame-tabs {
   display: grid !important;

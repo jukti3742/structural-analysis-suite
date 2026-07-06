@@ -91,15 +91,15 @@
     bindUnitChangeListener('load-unit-val', 'loadVal');
 
     // Tab switching for inputs panel (Add Input)
-    document.querySelectorAll('.frame-tabs .btn-subtab').forEach(btn => {
+    document.querySelectorAll('#section-add-input-wrapper .frame-tabs .btn-subtab').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.frame-tabs .btn-subtab').forEach(b => {
+        document.querySelectorAll('#section-add-input-wrapper .frame-tabs .btn-subtab').forEach(b => {
           b.classList.remove('active');
         });
         btn.classList.add('active');
         
         // Swap inputs display
-        document.querySelectorAll('.frame-tab-content').forEach(p => p.style.display = 'none');
+        document.querySelectorAll('#section-add-input-wrapper .frame-tab-content').forEach(p => p.style.display = 'none');
         const tabName = btn.id.replace('btn-tab-', '');
         const targetPanel = document.getElementById(`panel-tab-${tabName}`);
         if (targetPanel) {
@@ -588,6 +588,7 @@
         }
       }, true);
     }
+    bindOperationsEvents();
   }
 
   function toggleMemberLoadFields() {
@@ -958,7 +959,8 @@
         const firstCell = row.querySelector('td');
         if (firstCell) {
           const rowNodeId = firstCell.innerText.trim();
-          if (window.FrameCanvas && window.FrameCanvas.selectedSupportId === rowNodeId) {
+          const isSelected = window.FrameCanvas && (window.FrameCanvas.selectedSupportId === rowNodeId || (window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId)));
+          if (isSelected) {
             row.classList.add('selected-row');
           }
         }
@@ -968,10 +970,27 @@
           const firstCell = row.querySelector('td');
           if (firstCell && window.FrameCanvas) {
             const nodeId = firstCell.innerText.trim();
-            window.FrameCanvas.selectedSupportId = nodeId;
+            const isMulti = e.ctrlKey || e.shiftKey;
+            
+            if (!window.FrameCanvas.selectedSupportIds) {
+              window.FrameCanvas.selectedSupportIds = new Set();
+            }
+
+            if (isMulti) {
+              if (window.FrameCanvas.selectedSupportIds.has(nodeId)) {
+                window.FrameCanvas.selectedSupportIds.delete(nodeId);
+              } else {
+                window.FrameCanvas.selectedSupportIds.add(nodeId);
+              }
+              window.FrameCanvas.selectedSupportId = window.FrameCanvas.selectedSupportIds.size > 0 ? Array.from(window.FrameCanvas.selectedSupportIds)[window.FrameCanvas.selectedSupportIds.size - 1] : null;
+            } else {
+              window.FrameCanvas.selectedSupportIds.clear();
+              window.FrameCanvas.selectedSupportIds.add(nodeId);
+              window.FrameCanvas.selectedSupportId = nodeId;
+            }
+            
             window.FrameCanvas.render();
-            rows.forEach(r => r.classList.remove('selected-row'));
-            row.classList.add('selected-row');
+            window.selectSupportFromCanvas(window.FrameCanvas.selectedSupportId);
           }
         });
       });
@@ -1029,17 +1048,35 @@
       // Attach selection synchronization listeners
       const rows = tbodyLoads.querySelectorAll('tr');
       rows.forEach((row, idx) => {
-        if (window.FrameCanvas && window.FrameCanvas.selectedLoadIndex === idx) {
+        const isSelected = window.FrameCanvas && (window.FrameCanvas.selectedLoadIndex === idx || (window.FrameCanvas.selectedLoadIndexes && window.FrameCanvas.selectedLoadIndexes.has(idx)));
+        if (isSelected) {
           row.classList.add('selected-row');
         }
 
         row.addEventListener('click', (e) => {
           if (e.target.classList.contains('delete-btn')) return;
           if (window.FrameCanvas) {
-            window.FrameCanvas.selectedLoadIndex = idx;
+            const isMulti = e.ctrlKey || e.shiftKey;
+            
+            if (!window.FrameCanvas.selectedLoadIndexes) {
+              window.FrameCanvas.selectedLoadIndexes = new Set();
+            }
+
+            if (isMulti) {
+              if (window.FrameCanvas.selectedLoadIndexes.has(idx)) {
+                window.FrameCanvas.selectedLoadIndexes.delete(idx);
+              } else {
+                window.FrameCanvas.selectedLoadIndexes.add(idx);
+              }
+              window.FrameCanvas.selectedLoadIndex = window.FrameCanvas.selectedLoadIndexes.size > 0 ? Array.from(window.FrameCanvas.selectedLoadIndexes)[window.FrameCanvas.selectedLoadIndexes.size - 1] : null;
+            } else {
+              window.FrameCanvas.selectedLoadIndexes.clear();
+              window.FrameCanvas.selectedLoadIndexes.add(idx);
+              window.FrameCanvas.selectedLoadIndex = idx;
+            }
+            
             window.FrameCanvas.render();
-            rows.forEach(r => r.classList.remove('selected-row'));
-            row.classList.add('selected-row');
+            window.selectLoadFromCanvas(window.FrameCanvas.selectedLoadIndex);
           }
         });
       });
@@ -1575,7 +1612,1129 @@
     }
   }
 
+  // --- OPERATIONS PANEL FUNCTIONALITY ---
+
+  // Helper: Find if a node already exists at a coordinate within a tiny tolerance (0.1 mm)
+  function findExistingNodeAt(x, y, z) {
+    for (const id in window.FrameModel.nodes) {
+      const n = window.FrameModel.nodes[id];
+      const dist = Math.sqrt((n.x - x)**2 + (n.y - y)**2 + (n.z - z)**2);
+      if (dist < 0.0001) return id; // 0.1 mm
+    }
+    return null;
+  }
+
+  // Bind main tabs switching, subtab switching, and operations buttons
+  function bindOperationsEvents() {
+    // 1. Top-Level Main Tabs Switching
+    const tabAddInput = document.getElementById('btn-main-tab-add-input');
+    const tabOperations = document.getElementById('btn-main-tab-operations');
+    const wrapAddInput = document.getElementById('section-add-input-wrapper');
+    const wrapOperations = document.getElementById('section-operations-wrapper');
+    const panelOpParams = document.getElementById('panel-operation-params');
+    const panelPropInfo = document.getElementById('panel-properties-info');
+    const opParamsCard = document.getElementById('operations-parameters-card');
+
+    if (tabAddInput && tabOperations && wrapAddInput && wrapOperations && panelOpParams && panelPropInfo && opParamsCard) {
+      tabAddInput.addEventListener('click', () => {
+        tabAddInput.classList.add('active');
+        tabOperations.classList.remove('active');
+        wrapAddInput.style.display = 'block';
+        wrapOperations.style.display = 'none';
+        opParamsCard.style.display = 'flex';
+        panelPropInfo.style.display = 'flex';
+        panelOpParams.style.display = 'none';
+      });
+
+      tabOperations.addEventListener('click', () => {
+        tabOperations.classList.add('active');
+        tabAddInput.classList.remove('active');
+        wrapOperations.style.display = 'block';
+        wrapAddInput.style.display = 'none';
+        opParamsCard.style.display = 'flex';
+        panelPropInfo.style.display = 'none';
+        panelOpParams.style.display = 'flex';
+        
+        // Default select translation operation when entering operations tab
+        const activeSubtab = document.querySelector('#section-operations-wrapper .frame-tabs .btn-subtab.active');
+        if (activeSubtab) {
+          const tabName = activeSubtab.id.replace('btn-tab-', '');
+          if (tabName === 'node-ops') {
+            selectOperation('node-translate');
+          } else if (tabName === 'beam-ops') {
+            selectOperation('beam-split');
+          }
+        }
+      });
+    }
+
+    // Helper to change operation parameter view
+    function selectOperation(opName) {
+      document.querySelectorAll('.op-select-btn').forEach(btn => {
+        if (btn.getAttribute('data-op') === opName) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      document.querySelectorAll('.op-param-section').forEach(sec => {
+        sec.style.display = 'none';
+      });
+      const targetSec = document.getElementById(`op-params-${opName}`);
+      if (targetSec) {
+        targetSec.style.display = 'flex';
+      }
+    }
+
+    // 2. Select operation click bindings
+    document.querySelectorAll('.op-select-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const opName = btn.getAttribute('data-op');
+        selectOperation(opName);
+      });
+    });
+
+    // 3. Operations Subtabs Switching
+    document.querySelectorAll('#section-operations-wrapper .frame-tabs .btn-subtab').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('#section-operations-wrapper .frame-tabs .btn-subtab').forEach(b => {
+          b.classList.remove('active');
+        });
+        btn.classList.add('active');
+        
+        document.querySelectorAll('#section-operations-wrapper .frame-tab-content').forEach(p => p.style.display = 'none');
+        const tabName = btn.id.replace('btn-tab-', '');
+        const targetPanel = document.getElementById(`panel-tab-${tabName}`);
+        if (targetPanel) {
+          targetPanel.style.display = 'block';
+        }
+
+        // Auto-select first operation of the chosen subtab
+        if (tabName === 'node-ops') {
+          selectOperation('node-translate');
+        } else if (tabName === 'beam-ops') {
+          selectOperation('beam-split');
+        }
+      });
+    });
+
+    // 4. Split Method toggling within Operation Parameters Panel
+    const splitMethodSelect = document.getElementById('param-beam-splitmethod');
+    if (splitMethodSelect) {
+      splitMethodSelect.addEventListener('change', (e) => {
+        const valGroup = document.getElementById('param-beam-splitval-group');
+        const valLabel = document.getElementById('param-beam-splitval-label');
+        const valInput = document.getElementById('param-beam-splitval');
+        const method = e.target.value;
+        if (method === 'half') {
+          valGroup.style.display = 'none';
+        } else if (method === 'ratio') {
+          valGroup.style.display = 'block';
+          valLabel.textContent = 'Ratio (0.0 to 1.0)';
+          valInput.value = '0.5';
+          valInput.min = '0.01';
+          valInput.max = '0.99';
+          valInput.step = '0.05';
+        } else if (method === 'distance') {
+          valGroup.style.display = 'block';
+          valLabel.textContent = 'Distance (m)';
+          valInput.value = '1.0';
+          valInput.min = '0.01';
+          valInput.removeAttribute('max');
+          valInput.step = '0.5';
+        }
+      });
+    }
+
+    // 5. Node Translate: Mode toggle (Copies enabled/disabled based on Move/Copy selection)
+    const translateModeSelect = document.getElementById('param-node-tmode');
+    const translateCopiesInput = document.getElementById('param-node-tcopies');
+    if (translateModeSelect && translateCopiesInput) {
+      const handleTranslateModeChange = () => {
+        if (translateModeSelect.value === 'move') {
+          translateCopiesInput.disabled = true;
+          translateCopiesInput.value = '1';
+        } else {
+          translateCopiesInput.disabled = false;
+        }
+      };
+      translateModeSelect.addEventListener('change', handleTranslateModeChange);
+      handleTranslateModeChange();
+    }
+
+    // 6. Node Rotate: Mode toggle (Copies enabled/disabled based on Move/Copy selection)
+    const rotateModeSelect = document.getElementById('param-node-rmode');
+    const rotateCopiesInput = document.getElementById('param-node-rcopies');
+    if (rotateModeSelect && rotateCopiesInput) {
+      const handleRotateModeChange = () => {
+        if (rotateModeSelect.value === 'move') {
+          rotateCopiesInput.disabled = true;
+          rotateCopiesInput.value = '1';
+        } else {
+          rotateCopiesInput.disabled = false;
+        }
+      };
+      rotateModeSelect.addEventListener('change', handleRotateModeChange);
+      handleRotateModeChange();
+    }
+
+    // --- NODE OPERATIONS APPLY ACTION LISTENERS ---
+
+    // Node Apply: Translate
+    const btnNodeTranslate = document.getElementById('btn-apply-node-translate');
+    if (btnNodeTranslate) {
+      btnNodeTranslate.addEventListener('click', () => {
+        const selectedNodes = Array.from(window.FrameCanvas.selectedNodeIds || []);
+        if (selectedNodes.length === 0) {
+          showToast('Please select at least one node in the viewport.', 'error');
+          return;
+        }
+
+        const dx = parseFloat(document.getElementById('param-node-tx').value) || 0.0;
+        const dy = parseFloat(document.getElementById('param-node-ty').value) || 0.0;
+        const dz = parseFloat(document.getElementById('param-node-tz').value) || 0.0;
+        const copies = parseInt(document.getElementById('param-node-tcopies').value) || 1;
+        const mode = document.getElementById('param-node-tmode').value; // 'copy' or 'move'
+
+        if (dx === 0 && dy === 0 && dz === 0) {
+          showToast('Translation vector cannot be zero.', 'error');
+          return;
+        }
+
+        if (mode === 'move') {
+          selectedNodes.forEach(nodeId => {
+            const n = window.FrameModel.nodes[nodeId];
+            if (n) {
+              n.x += dx;
+              n.y += dy;
+              n.z += dz;
+            }
+          });
+          window.FrameModel.results = null;
+          showToast(`Successfully moved ${selectedNodes.length} node(s).`);
+        } else {
+          // Copy Mode
+          let createdCount = 0;
+          let skippedCount = 0;
+          selectedNodes.forEach(nodeId => {
+            const baseNode = window.FrameModel.nodes[nodeId];
+            if (!baseNode) return;
+            for (let c = 1; c <= copies; c++) {
+              const tx = baseNode.x + c * dx;
+              const ty = baseNode.y + c * dy;
+              const tz = baseNode.z + c * dz;
+              const duplicateId = findExistingNodeAt(tx, ty, tz);
+              if (duplicateId) {
+                skippedCount++;
+              } else {
+                let k = 1;
+                while (window.FrameModel.nodes[`N${k}`]) k++;
+                window.FrameModel.addNode(`N${k}`, tx, ty, tz);
+                createdCount++;
+              }
+            }
+          });
+          showToast(`Successfully copied. Spawned ${createdCount} node(s).` + (skippedCount > 0 ? ` (Skipped ${skippedCount} duplicates)` : ''));
+        }
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Node Apply: Rotate
+    const btnNodeRotate = document.getElementById('btn-apply-node-rotate');
+    if (btnNodeRotate) {
+      btnNodeRotate.addEventListener('click', () => {
+        const selectedNodes = Array.from(window.FrameCanvas.selectedNodeIds || []);
+        if (selectedNodes.length === 0) {
+          showToast('Please select at least one node in the viewport.', 'error');
+          return;
+        }
+
+        const axis = document.getElementById('param-node-raxis').value;
+        const angleDeg = parseFloat(document.getElementById('param-node-rangle').value) || 0.0;
+        const copies = parseInt(document.getElementById('param-node-rcopies').value) || 1;
+        const mode = document.getElementById('param-node-rmode').value; // 'copy' or 'move'
+        const cx = parseFloat(document.getElementById('param-node-rcx').value) || 0.0;
+        const cy = parseFloat(document.getElementById('param-node-rcy').value) || 0.0;
+        const cz = parseFloat(document.getElementById('param-node-rcz').value) || 0.0;
+
+        if (angleDeg === 0) {
+          showToast('Rotation angle cannot be zero.', 'error');
+          return;
+        }
+
+        const rad = angleDeg * Math.PI / 180.0;
+
+        if (mode === 'move') {
+          selectedNodes.forEach(nodeId => {
+            const n = window.FrameModel.nodes[nodeId];
+            if (!n) return;
+            const dx = n.x - cx;
+            const dy = n.y - cy;
+            const dz = n.z - cz;
+            let rx, ry, rz;
+            if (axis === 'Z') {
+              rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+              ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+              rz = dz;
+            } else if (axis === 'X') {
+              rx = dx;
+              ry = dy * Math.cos(rad) - dz * Math.sin(rad);
+              rz = dy * Math.sin(rad) + dz * Math.cos(rad);
+            } else {
+              rz = dz * Math.cos(rad) - dx * Math.sin(rad);
+              rx = dz * Math.sin(rad) + dx * Math.cos(rad);
+              ry = dy;
+            }
+            n.x = rx + cx;
+            n.y = ry + cy;
+            n.z = rz + cz;
+          });
+          window.FrameModel.results = null;
+          showToast(`Successfully rotated ${selectedNodes.length} node(s).`);
+        } else {
+          // Copy Mode
+          let createdCount = 0;
+          let skippedCount = 0;
+          selectedNodes.forEach(nodeId => {
+            const n = window.FrameModel.nodes[nodeId];
+            if (!n) return;
+            for (let c = 1; c <= copies; c++) {
+              const theta = c * rad;
+              const dx = n.x - cx;
+              const dy = n.y - cy;
+              const dz = n.z - cz;
+              let rx, ry, rz;
+              if (axis === 'Z') {
+                rx = dx * Math.cos(theta) - dy * Math.sin(theta);
+                ry = dx * Math.sin(theta) + dy * Math.cos(theta);
+                rz = dz;
+              } else if (axis === 'X') {
+                rx = dx;
+                ry = dy * Math.cos(theta) - dz * Math.sin(theta);
+                rz = dy * Math.sin(theta) + dz * Math.cos(theta);
+              } else {
+                rz = dz * Math.cos(theta) - dx * Math.sin(theta);
+                rx = dz * Math.sin(theta) + dx * Math.cos(theta);
+                ry = dy;
+              }
+              const tx = rx + cx;
+              const ty = ry + cy;
+              const tz = rz + cz;
+              const duplicateId = findExistingNodeAt(tx, ty, tz);
+              if (duplicateId) {
+                skippedCount++;
+              } else {
+                let k = 1;
+                while (window.FrameModel.nodes[`N${k}`]) k++;
+                window.FrameModel.addNode(`N${k}`, tx, ty, tz);
+                createdCount++;
+              }
+            }
+          });
+          showToast(`Successfully rotated and copied. Spawned ${createdCount} node(s).` + (skippedCount > 0 ? ` (Skipped ${skippedCount} duplicates)` : ''));
+        }
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Node Apply: Mirror
+    const btnNodeMirror = document.getElementById('btn-apply-node-mirror');
+    if (btnNodeMirror) {
+      btnNodeMirror.addEventListener('click', () => {
+        const selectedNodes = Array.from(window.FrameCanvas.selectedNodeIds || []);
+        if (selectedNodes.length === 0) {
+          showToast('Please select at least one node in the viewport.', 'error');
+          return;
+        }
+
+        const plane = document.getElementById('param-node-mplane').value;
+        const mcoord = parseFloat(document.getElementById('param-node-mcoord').value) || 0.0;
+        const mode = document.getElementById('param-node-mmode').value; // 'copy' or 'move'
+
+        if (mode === 'move') {
+          selectedNodes.forEach(nodeId => {
+            const n = window.FrameModel.nodes[nodeId];
+            if (!n) return;
+            if (plane === 'YZ') n.x = 2 * mcoord - n.x;
+            else if (plane === 'XZ') n.y = 2 * mcoord - n.y;
+            else if (plane === 'XY') n.z = 2 * mcoord - n.z;
+          });
+          window.FrameModel.results = null;
+          showToast(`Successfully mirrored ${selectedNodes.length} node(s).`);
+        } else {
+          // Copy Mode
+          let createdCount = 0;
+          let skippedCount = 0;
+          selectedNodes.forEach(nodeId => {
+            const n = window.FrameModel.nodes[nodeId];
+            if (!n) return;
+            let tx = n.x, ty = n.y, tz = n.z;
+            if (plane === 'YZ') tx = 2 * mcoord - n.x;
+            else if (plane === 'XZ') ty = 2 * mcoord - n.y;
+            else if (plane === 'XY') tz = 2 * mcoord - n.z;
+            const duplicateId = findExistingNodeAt(tx, ty, tz);
+            if (duplicateId) {
+              skippedCount++;
+            } else {
+              let k = 1;
+              while (window.FrameModel.nodes[`N${k}`]) k++;
+              window.FrameModel.addNode(`N${k}`, tx, ty, tz);
+              createdCount++;
+            }
+          });
+          showToast(`Successfully mirrored and copied. Spawned ${createdCount} node(s).` + (skippedCount > 0 ? ` (Skipped ${skippedCount} duplicates)` : ''));
+        }
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Node Apply: Merge
+    const btnNodeMerge = document.getElementById('btn-apply-node-merge');
+    if (btnNodeMerge) {
+      btnNodeMerge.addEventListener('click', () => {
+        const tolerance = parseFloat(document.getElementById('param-node-mergetol').value) || 0.001;
+        const target = document.getElementById('param-node-mergetarget').value; // 'selected' or 'all'
+
+        let nodeIds = [];
+        if (target === 'selected') {
+          nodeIds = Array.from(window.FrameCanvas.selectedNodeIds || []);
+          if (nodeIds.length === 0) {
+            showToast('Please select at least one node to merge.', 'error');
+            return;
+          }
+        } else {
+          nodeIds = Object.keys(window.FrameModel.nodes);
+        }
+
+        if (nodeIds.length < 2) {
+          showToast('At least 2 nodes are required to perform a merge operation.', 'error');
+          return;
+        }
+
+        // Identify overlapping groups
+        let mergedCount = 0;
+        const processed = new Set();
+
+        for (let i = 0; i < nodeIds.length; i++) {
+          const idA = nodeIds[i];
+          if (processed.has(idA)) continue;
+
+          const nodeA = window.FrameModel.nodes[idA];
+          if (!nodeA) continue;
+
+          for (let j = i + 1; j < nodeIds.length; j++) {
+            const idB = nodeIds[j];
+            if (processed.has(idB)) continue;
+
+            const nodeB = window.FrameModel.nodes[idB];
+            if (!nodeB) continue;
+
+            const dist = Math.sqrt((nodeA.x - nodeB.x)**2 + (nodeA.y - nodeB.y)**2 + (nodeA.z - nodeB.z)**2);
+            if (dist <= tolerance) {
+              // Merge nodeB into nodeA
+              processed.add(idB);
+              
+              // Update members connectivity pointing to idB
+              for (const mId in window.FrameModel.members) {
+                const mem = window.FrameModel.members[mId];
+                if (mem.startNode === idB) mem.startNode = idA;
+                if (mem.endNode === idB) mem.endNode = idA;
+              }
+
+              // Update nodal loads pointing to idB
+              window.FrameModel.loads.forEach(load => {
+                if (load.type === 'NodalLoad' && load.nodeId === idB) {
+                  load.nodeId = idA;
+                }
+              });
+
+              // Update supports pointing to idB
+              if (window.FrameModel.supports[idB]) {
+                if (!window.FrameModel.supports[idA]) {
+                  window.FrameModel.addSupport(idA, window.FrameModel.supports[idB].restraints);
+                }
+                delete window.FrameModel.supports[idB];
+              }
+
+              // Delete merged node
+              delete window.FrameModel.nodes[idB];
+              mergedCount++;
+            }
+          }
+        }
+
+        if (mergedCount > 0) {
+          window.FrameModel.results = null;
+          showToast(`Successfully merged duplicate nodes. Removed ${mergedCount} overlapping node(s).`);
+          if (window.FrameCanvas.selectedNodeIds) {
+            window.FrameCanvas.selectNode(null, false);
+          }
+          window.initFrameAnalysisView();
+        } else {
+          showToast('No nodes found within the specified merge tolerance distance.', 'error');
+        }
+      });
+    }
+
+    // Node Apply: Renumber
+    const btnNodeRenumber = document.getElementById('btn-apply-node-renumber');
+    if (btnNodeRenumber) {
+      btnNodeRenumber.addEventListener('click', () => {
+        const startIndex = parseInt(document.getElementById('param-node-renumstart').value) || 1;
+        const axis = document.getElementById('param-node-renumsort').value; // 'X', 'Y', or 'Z'
+
+        const nodeList = Object.values(window.FrameModel.nodes);
+        if (nodeList.length === 0) {
+          showToast('No nodes exist in the model to renumber.', 'error');
+          return;
+        }
+
+        // Sort based on coordinates along sorting axis
+        nodeList.sort((a, b) => {
+          if (axis === 'X') return a.x - b.x;
+          if (axis === 'Y') return a.y - b.y;
+          return a.z - b.z;
+        });
+
+        // Generate mapping from old ID to new ID
+        const mapping = {};
+        nodeList.forEach((n, idx) => {
+          mapping[n.id] = `N${startIndex + idx}`;
+        });
+
+        // Recreate nodes dictionary
+        const newNodes = {};
+        nodeList.forEach(n => {
+          const newId = mapping[n.id];
+          newNodes[newId] = { id: newId, x: n.x, y: n.y, z: n.z };
+        });
+        window.FrameModel.nodes = newNodes;
+
+        // Reconnect member definitions
+        for (const mId in window.FrameModel.members) {
+          const mem = window.FrameModel.members[mId];
+          if (mapping[mem.startNode]) mem.startNode = mapping[mem.startNode];
+          if (mapping[mem.endNode]) mem.endNode = mapping[mem.endNode];
+        }
+
+        // Reconnect supports
+        const newSupports = {};
+        for (const nodeId in window.FrameModel.supports) {
+          if (mapping[nodeId]) {
+            const newId = mapping[nodeId];
+            newSupports[newId] = { nodeId: newId, restraints: window.FrameModel.supports[nodeId].restraints };
+          }
+        }
+        window.FrameModel.supports = newSupports;
+
+        // Reconnect loads
+        window.FrameModel.loads.forEach(load => {
+          if (load.type === 'NodalLoad' && mapping[load.nodeId]) {
+            load.nodeId = mapping[load.nodeId];
+          }
+        });
+
+        window.FrameModel.results = null;
+        showToast('Successfully renumbered all model nodes sequentially.');
+        if (window.FrameCanvas.selectedNodeIds) {
+          window.FrameCanvas.selectNode(null, false);
+        }
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Node Apply: Delete
+    const btnNodeDelete = document.getElementById('btn-apply-node-delete');
+    if (btnNodeDelete) {
+      btnNodeDelete.addEventListener('click', () => {
+        const selectedNodes = Array.from(window.FrameCanvas.selectedNodeIds || []);
+        if (selectedNodes.length === 0) {
+          showToast('Please select at least one node to delete.', 'error');
+          return;
+        }
+
+        const confirmCheck = document.getElementById('param-node-delconfirm');
+        if (!confirmCheck || !confirmCheck.checked) {
+          showToast('Please check the confirmation box to delete selected nodes.', 'error');
+          return;
+        }
+
+        selectedNodes.forEach(nodeId => {
+          window.FrameModel.deleteNode(nodeId);
+        });
+
+        if (confirmCheck) confirmCheck.checked = false;
+        if (window.FrameCanvas.selectedNodeIds) {
+          window.FrameCanvas.selectNode(null, false);
+        }
+
+        showToast(`Successfully deleted ${selectedNodes.length} node(s) and any connected beams.`);
+        window.initFrameAnalysisView();
+      });
+    }
+
+
+    // --- BEAM OPERATIONS APPLY ACTION LISTENERS ---
+
+    // Beam Apply: Split
+    const btnBeamSplit = document.getElementById('btn-apply-beam-split');
+    if (btnBeamSplit) {
+      btnBeamSplit.addEventListener('click', () => {
+        const selectedBeams = Array.from(window.FrameCanvas.selectedMemberIds || []);
+        if (selectedBeams.length !== 1) {
+          showToast('Please select exactly one beam in the viewport to split.', 'error');
+          return;
+        }
+
+        const beamId = selectedBeams[0];
+        const member = window.FrameModel.members[beamId];
+        if (!member) return;
+
+        const node1 = window.FrameModel.nodes[member.startNode];
+        const node2 = window.FrameModel.nodes[member.endNode];
+        if (!node1 || !node2) return;
+
+        const method = document.getElementById('param-beam-splitmethod').value;
+        const splitVal = parseFloat(document.getElementById('param-beam-splitval').value) || 0.5;
+
+        const length = Math.sqrt((node2.x - node1.x)**2 + (node2.y - node1.y)**2 + (node2.z - node1.z)**2);
+        let f = 0.5;
+
+        if (method === 'ratio') {
+          if (splitVal <= 0.0 || splitVal >= 1.0) {
+            showToast('Ratio must be between 0.0 and 1.0 (exclusive).', 'error');
+            return;
+          }
+          f = splitVal;
+        } else if (method === 'distance') {
+          if (splitVal <= 0.0 || splitVal >= length) {
+            showToast(`Distance must be greater than 0 and less than beam length (${length.toFixed(3)} m).`, 'error');
+            return;
+          }
+          f = splitVal / length;
+        }
+
+        const xs = node1.x + f * (node2.x - node1.x);
+        const ys = node1.y + f * (node2.y - node1.y);
+        const zs = node1.z + f * (node2.z - node1.z);
+
+        let newNodeId = findExistingNodeAt(xs, ys, zs);
+        if (!newNodeId) {
+          let k = 1;
+          while (window.FrameModel.nodes[`N${k}`]) k++;
+          newNodeId = `N${k}`;
+          window.FrameModel.addNode(newNodeId, xs, ys, zs);
+        }
+
+        // Generate split segments IDs
+        let k1 = 1;
+        while (window.FrameModel.members[`B${k1}`]) k1++;
+        const newBeamId1 = `B${k1}`;
+
+        let k2 = k1 + 1;
+        while (window.FrameModel.members[`B${k2}`]) k2++;
+        const newBeamId2 = `B${k2}`;
+
+        const origReleases = member.releases || {
+          Dxi: false, Dyi: false, Dzi: false, Rxi: false, Ryi: false, Rzi: false,
+          Dxj: false, Dyj: false, Dzj: false, Rxj: false, Ryj: false, Rzj: false
+        };
+
+        const releases1 = {
+          Dxi: origReleases.Dxi || false, Dyi: origReleases.Dyi || false, Dzi: origReleases.Dzi || false,
+          Rxi: origReleases.Rxi || false, Ryi: origReleases.Ryi || false, Rzi: origReleases.Rzi || false,
+          Dxj: false, Dyj: false, Dzj: false, Rxj: false, Ryj: false, Rzj: false
+        };
+
+        const releases2 = {
+          Dxi: false, Dyi: false, Dzi: false, Rxi: false, Ryi: false, Rzi: false,
+          Dxj: origReleases.Dxj || false, Dyj: origReleases.Dyj || false, Dzj: origReleases.Dzj || false,
+          Rxj: origReleases.Rxj || false, Ryj: origReleases.Ryj || false, Rzj: origReleases.Rzj || false
+        };
+
+        window.FrameModel.addMember(newBeamId1, member.startNode, newNodeId, member.sectionName, member.materialName, member.beta || 0.0, releases1);
+        window.FrameModel.addMember(newBeamId2, newNodeId, member.endNode, member.sectionName, member.materialName, member.beta || 0.0, releases2);
+        window.FrameModel.deleteMember(beamId);
+
+        if (window.FrameCanvas.selectedMemberIds) {
+          window.FrameCanvas.selectMember(null, false);
+        }
+
+        showToast(`Beam ${beamId} successfully split into ${newBeamId1} and ${newBeamId2}.`);
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Beam Apply: Merge
+    const btnBeamMerge = document.getElementById('btn-apply-beam-merge');
+    if (btnBeamMerge) {
+      btnBeamMerge.addEventListener('click', () => {
+        const selectedBeams = Array.from(window.FrameCanvas.selectedMemberIds || []);
+        if (selectedBeams.length !== 2) {
+          showToast('Please select exactly two adjacent beams to merge.', 'error');
+          return;
+        }
+
+        const beam1 = window.FrameModel.members[selectedBeams[0]];
+        const beam2 = window.FrameModel.members[selectedBeams[1]];
+        if (!beam1 || !beam2) return;
+
+        // Find common node
+        let commonNode = null;
+        let extNode1 = null;
+        let extNode2 = null;
+
+        if (beam1.startNode === beam2.startNode) {
+          commonNode = beam1.startNode;
+          extNode1 = beam1.endNode;
+          extNode2 = beam2.endNode;
+        } else if (beam1.startNode === beam2.endNode) {
+          commonNode = beam1.startNode;
+          extNode1 = beam1.endNode;
+          extNode2 = beam2.startNode;
+        } else if (beam1.endNode === beam2.startNode) {
+          commonNode = beam1.endNode;
+          extNode1 = beam1.startNode;
+          extNode2 = beam2.endNode;
+        } else if (beam1.endNode === beam2.endNode) {
+          commonNode = beam1.endNode;
+          extNode1 = beam1.startNode;
+          extNode2 = beam2.startNode;
+        }
+
+        if (!commonNode) {
+          showToast('The two selected beams must share a common node to be merged.', 'error');
+          return;
+        }
+
+        const nc = window.FrameModel.nodes[commonNode];
+        const n1 = window.FrameModel.nodes[extNode1];
+        const n2 = window.FrameModel.nodes[extNode2];
+
+        // Verify collinearity
+        const dx1 = nc.x - n1.x, dy1 = nc.y - n1.y, dz1 = nc.z - n1.z;
+        const dx2 = n2.x - nc.x, dy2 = n2.y - nc.y, dz2 = n2.z - nc.z;
+
+        const len1 = Math.sqrt(dx1**2 + dy1**2 + dz1**2);
+        const len2 = Math.sqrt(dx2**2 + dy2**2 + dz2**2);
+
+        const dot = (dx1*dx2 + dy1*dy2 + dz1*dz2) / (len1 * len2);
+        if (Math.abs(dot) < 0.99) {
+          showToast('The selected beams are not collinear.', 'error');
+          return;
+        }
+
+        // Construct releases
+        const mergedReleases = {
+          Dxi: beam1.releases.Dxi || beam2.releases.Dxi || false,
+          Dyi: beam1.releases.Dyi || beam2.releases.Dyi || false,
+          Dzi: beam1.releases.Dzi || beam2.releases.Dzi || false,
+          Rxi: beam1.releases.Rxi || beam2.releases.Rxi || false,
+          Ryi: beam1.releases.Ryi || beam2.releases.Ryi || false,
+          Rzi: beam1.releases.Rzi || beam2.releases.Rzi || false,
+          Dxj: beam1.releases.Dxj || beam2.releases.Dxj || false,
+          Dyj: beam1.releases.Dyj || beam2.releases.Dyj || false,
+          Dzj: beam1.releases.Dzj || beam2.releases.Dzj || false,
+          Rxj: beam1.releases.Rxj || beam2.releases.Rxj || false,
+          Ryj: beam1.releases.Ryj || beam2.releases.Ryj || false,
+          Rzj: beam1.releases.Rzj || beam2.releases.Rzj || false
+        };
+
+        // Create new merged beam
+        let k = 1;
+        while (window.FrameModel.members[`B${k}`]) k++;
+        const newBeamId = `B${k}`;
+
+        window.FrameModel.addMember(newBeamId, extNode1, extNode2, beam1.sectionName, beam1.materialName, beam1.beta || 0.0, mergedReleases);
+
+        // Delete old beams
+        window.FrameModel.deleteMember(beam1.id);
+        window.FrameModel.deleteMember(beam2.id);
+
+        // Check if commonNode has any other connections, if not delete it
+        let hasOtherConnections = false;
+        for (const mId in window.FrameModel.members) {
+          const m = window.FrameModel.members[mId];
+          if (m.startNode === commonNode || m.endNode === commonNode) {
+            hasOtherConnections = true;
+            break;
+          }
+        }
+        if (!hasOtherConnections) {
+          window.FrameModel.deleteNode(commonNode);
+        }
+
+        if (window.FrameCanvas.selectedMemberIds) {
+          window.FrameCanvas.selectMember(null, false);
+        }
+
+        showToast(`Beams successfully merged into new element ${newBeamId}.`);
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Beam Apply: Extend
+    const btnBeamExtend = document.getElementById('btn-apply-beam-extend');
+    if (btnBeamExtend) {
+      btnBeamExtend.addEventListener('click', () => {
+        const selectedBeams = Array.from(window.FrameCanvas.selectedMemberIds || []);
+        if (selectedBeams.length !== 1) {
+          showToast('Please select exactly one beam to extend.', 'error');
+          return;
+        }
+
+        const extLen = parseFloat(document.getElementById('param-beam-extlen').value) || 1.0;
+        const targetNodeEnd = document.getElementById('param-beam-extnode').value; // 'start' or 'end'
+
+        const beam = window.FrameModel.members[selectedBeams[0]];
+        if (!beam) return;
+
+        const n1 = window.FrameModel.nodes[beam.startNode];
+        const n2 = window.FrameModel.nodes[beam.endNode];
+        if (!n1 || !n2) return;
+
+        const dx = n2.x - n1.x, dy = n2.y - n1.y, dz = n2.z - n1.z;
+        const length = Math.sqrt(dx**2 + dy**2 + dz**2);
+        const ux = dx / length, uy = dy / length, uz = dz / length;
+
+        if (targetNodeEnd === 'end') {
+          n2.x += extLen * ux;
+          n2.y += extLen * uy;
+          n2.z += extLen * uz;
+        } else {
+          n1.x -= extLen * ux;
+          n1.y -= extLen * uy;
+          n1.z -= extLen * uz;
+        }
+
+        window.FrameModel.results = null;
+        showToast(`Successfully extended beam ${beam.id}.`);
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Beam Apply: Trim
+    const btnBeamTrim = document.getElementById('btn-apply-beam-trim');
+    if (btnBeamTrim) {
+      btnBeamTrim.addEventListener('click', () => {
+        const selectedBeams = Array.from(window.FrameCanvas.selectedMemberIds || []);
+        if (selectedBeams.length !== 1) {
+          showToast('Please select exactly one beam to trim.', 'error');
+          return;
+        }
+
+        const trimLen = parseFloat(document.getElementById('param-beam-trimlen').value) || 1.0;
+        const targetNodeEnd = document.getElementById('param-beam-trimnode').value; // 'start' or 'end'
+
+        const beam = window.FrameModel.members[selectedBeams[0]];
+        if (!beam) return;
+
+        const n1 = window.FrameModel.nodes[beam.startNode];
+        const n2 = window.FrameModel.nodes[beam.endNode];
+        if (!n1 || !n2) return;
+
+        const dx = n2.x - n1.x, dy = n2.y - n1.y, dz = n2.z - n1.z;
+        const length = Math.sqrt(dx**2 + dy**2 + dz**2);
+
+        if (trimLen >= length) {
+          showToast(`Trim length cannot be greater than or equal to beam length (${length.toFixed(3)} m).`, 'error');
+          return;
+        }
+
+        const ux = dx / length, uy = dy / length, uz = dz / length;
+
+        if (targetNodeEnd === 'end') {
+          n2.x -= trimLen * ux;
+          n2.y -= trimLen * uy;
+          n2.z -= trimLen * uz;
+        } else {
+          n1.x += trimLen * ux;
+          n1.y += trimLen * uy;
+          n1.z += trimLen * uz;
+        }
+
+        window.FrameModel.results = null;
+        showToast(`Successfully trimmed beam ${beam.id}.`);
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Beam Apply: Reverse Orientation
+    const btnBeamReverse = document.getElementById('btn-apply-beam-reverse');
+    if (btnBeamReverse) {
+      btnBeamReverse.addEventListener('click', () => {
+        const selectedBeams = Array.from(window.FrameCanvas.selectedMemberIds || []);
+        if (selectedBeams.length === 0) {
+          showToast('Please select at least one beam to reverse.', 'error');
+          return;
+        }
+
+        selectedBeams.forEach(beamId => {
+          const mem = window.FrameModel.members[beamId];
+          if (!mem) return;
+
+          // Swap connectivity
+          const tmp = mem.startNode;
+          mem.startNode = mem.endNode;
+          mem.endNode = tmp;
+
+          // Swap end releases
+          const orig = mem.releases || {
+            Dxi: false, Dyi: false, Dzi: false, Rxi: false, Ryi: false, Rzi: false,
+            Dxj: false, Dyj: false, Dzj: false, Rxj: false, Ryj: false, Rzj: false
+          };
+
+          mem.releases = {
+            Dxi: orig.Dxj || false, Dyi: orig.Dyj || false, Dzi: orig.Dzj || false,
+            Rxi: orig.Rxj || false, Ryi: orig.Ryj || false, Rzi: orig.Rzj || false,
+            Dxj: orig.Dxi || false, Dyj: orig.Dyi || false, Dzj: orig.Dzi || false,
+            Rxj: orig.Rxi || false, Ryj: orig.Ryi || false, Rzj: orig.Rzi || false
+          };
+        });
+
+        window.FrameModel.results = null;
+        showToast(`Reversed orientation for ${selectedBeams.length} beam(s).`);
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Beam Apply: Mirror
+    const btnBeamMirror = document.getElementById('btn-apply-beam-mirror');
+    if (btnBeamMirror) {
+      btnBeamMirror.addEventListener('click', () => {
+        const selectedBeams = Array.from(window.FrameCanvas.selectedMemberIds || []);
+        if (selectedBeams.length === 0) {
+          showToast('Please select at least one beam to mirror.', 'error');
+          return;
+        }
+
+        const plane = document.getElementById('param-beam-mplane').value;
+        const mcoord = parseFloat(document.getElementById('param-beam-mcoord').value) || 0.0;
+        const mode = document.getElementById('param-beam-mmode').value; // 'copy' or 'move'
+
+        if (mode === 'move') {
+          // Mirroring nodes connected to selected beams
+          const nodesToMirror = new Set();
+          selectedBeams.forEach(beamId => {
+            const m = window.FrameModel.members[beamId];
+            if (m) {
+              nodesToMirror.add(m.startNode);
+              nodesToMirror.add(m.endNode);
+            }
+          });
+
+          nodesToMirror.forEach(nodeId => {
+            const n = window.FrameModel.nodes[nodeId];
+            if (!n) return;
+            if (plane === 'YZ') n.x = 2 * mcoord - n.x;
+            else if (plane === 'XZ') n.y = 2 * mcoord - n.y;
+            else if (plane === 'XY') n.z = 2 * mcoord - n.z;
+          });
+          window.FrameModel.results = null;
+          showToast(`Successfully mirrored ${selectedBeams.length} beam(s) by moving coordinates.`);
+        } else {
+          // Copy Mode: Mirror nodes (checking duplicates) and create mirrored members
+          let createdCount = 0;
+          selectedBeams.forEach(beamId => {
+            const m = window.FrameModel.members[beamId];
+            if (!m) return;
+
+            const n1 = window.FrameModel.nodes[m.startNode];
+            const n2 = window.FrameModel.nodes[m.endNode];
+            if (!n1 || !n2) return;
+
+            let tx1 = n1.x, ty1 = n1.y, tz1 = n1.z;
+            let tx2 = n2.x, ty2 = n2.y, tz2 = n2.z;
+
+            if (plane === 'YZ') { tx1 = 2 * mcoord - n1.x; tx2 = 2 * mcoord - n2.x; }
+            else if (plane === 'XZ') { ty1 = 2 * mcoord - n1.y; ty2 = 2 * mcoord - n2.y; }
+            else if (plane === 'XY') { tz1 = 2 * mcoord - n1.z; tz2 = 2 * mcoord - n2.z; }
+
+            let mirNodeId1 = findExistingNodeAt(tx1, ty1, tz1);
+            if (!mirNodeId1) {
+              let k = 1;
+              while (window.FrameModel.nodes[`N${k}`]) k++;
+              mirNodeId1 = `N${k}`;
+              window.FrameModel.addNode(mirNodeId1, tx1, ty1, tz1);
+            }
+
+            let mirNodeId2 = findExistingNodeAt(tx2, ty2, tz2);
+            if (!mirNodeId2) {
+              let k = 1;
+              while (window.FrameModel.nodes[`N${k}`]) k++;
+              mirNodeId2 = `N${k}`;
+              window.FrameModel.addNode(mirNodeId2, tx2, ty2, tz2);
+            }
+
+            let k = 1;
+            while (window.FrameModel.members[`B${k}`]) k++;
+            const newBeamId = `B${k}`;
+
+            window.FrameModel.addMember(newBeamId, mirNodeId1, mirNodeId2, m.sectionName, m.materialName, m.beta || 0.0, m.releases);
+            createdCount++;
+          });
+          showToast(`Successfully mirrored and copied. Spawned ${createdCount} new beam(s).`);
+        }
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Beam Apply: Delete
+    const btnBeamDelete = document.getElementById('btn-apply-beam-delete');
+    if (btnBeamDelete) {
+      btnBeamDelete.addEventListener('click', () => {
+        const selectedBeams = Array.from(window.FrameCanvas.selectedMemberIds || []);
+        if (selectedBeams.length === 0) {
+          showToast('Please select at least one beam to delete.', 'error');
+          return;
+        }
+
+        const confirmCheck = document.getElementById('param-beam-delconfirm');
+        if (!confirmCheck || !confirmCheck.checked) {
+          showToast('Please check the confirmation box to delete selected beams.', 'error');
+          return;
+        }
+
+        selectedBeams.forEach(beamId => {
+          window.FrameModel.deleteMember(beamId);
+        });
+
+        if (confirmCheck) confirmCheck.checked = false;
+        if (window.FrameCanvas.selectedMemberIds) {
+          window.FrameCanvas.selectMember(null, false);
+        }
+
+        showToast(`Successfully deleted ${selectedBeams.length} beam(s).`);
+        window.initFrameAnalysisView();
+      });
+    }
+
+    // Operations Reset Handlers
+    const registerResetHandler = (btnId, resetFn) => {
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          resetFn();
+          showToast('Parameters reset to default.');
+        });
+      }
+    };
+
+    registerResetHandler('btn-reset-node-translate', () => {
+      const tx = document.getElementById('param-node-tx');
+      const ty = document.getElementById('param-node-ty');
+      const tz = document.getElementById('param-node-tz');
+      const copies = document.getElementById('param-node-tcopies');
+      const mode = document.getElementById('param-node-tmode');
+      if (tx) tx.value = '1.0';
+      if (ty) ty.value = '0.0';
+      if (tz) tz.value = '0.0';
+      if (copies) {
+        copies.value = '1';
+        copies.disabled = false;
+      }
+      if (mode) mode.value = 'copy';
+    });
+
+    registerResetHandler('btn-reset-node-rotate', () => {
+      const axis = document.getElementById('param-node-raxis');
+      const angle = document.getElementById('param-node-rangle');
+      const cx = document.getElementById('param-node-rcx');
+      const cy = document.getElementById('param-node-rcy');
+      const cz = document.getElementById('param-node-rcz');
+      const copies = document.getElementById('param-node-rcopies');
+      const mode = document.getElementById('param-node-rmode');
+      if (axis) axis.value = 'Z';
+      if (angle) angle.value = '90';
+      if (cx) cx.value = '0.0';
+      if (cy) cy.value = '0.0';
+      if (cz) cz.value = '0.0';
+      if (copies) {
+        copies.value = '1';
+        copies.disabled = false;
+      }
+      if (mode) mode.value = 'copy';
+    });
+
+    registerResetHandler('btn-reset-node-mirror', () => {
+      const plane = document.getElementById('param-node-mplane');
+      const coord = document.getElementById('param-node-mcoord');
+      const mode = document.getElementById('param-node-mmode');
+      if (plane) plane.value = 'YZ';
+      if (coord) coord.value = '0.0';
+      if (mode) mode.value = 'copy';
+    });
+
+    registerResetHandler('btn-reset-node-merge', () => {
+      const tol = document.getElementById('param-node-mergetol');
+      const target = document.getElementById('param-node-mergetarget');
+      if (tol) tol.value = '0.001';
+      if (target) target.value = 'selected';
+    });
+
+    registerResetHandler('btn-reset-node-renumber', () => {
+      const start = document.getElementById('param-node-renumstart');
+      const sort = document.getElementById('param-node-renumsort');
+      if (start) start.value = '1';
+      if (sort) sort.value = 'X';
+    });
+
+    registerResetHandler('btn-reset-node-delete', () => {
+      const check = document.getElementById('param-node-delconfirm');
+      if (check) check.checked = false;
+    });
+
+    registerResetHandler('btn-reset-beam-split', () => {
+      const method = document.getElementById('param-beam-splitmethod');
+      const val = document.getElementById('param-beam-splitval');
+      const valGroup = document.getElementById('param-beam-splitval-group');
+      if (method) method.value = 'half';
+      if (val) val.value = '0.5';
+      if (valGroup) valGroup.style.display = 'none';
+    });
+
+    registerResetHandler('btn-reset-beam-merge', () => {
+      // No input controls
+    });
+
+    registerResetHandler('btn-reset-beam-extend', () => {
+      const len = document.getElementById('param-beam-extlen');
+      const node = document.getElementById('param-beam-extnode');
+      if (len) len.value = '1.0';
+      if (node) node.value = 'end';
+    });
+
+    registerResetHandler('btn-reset-beam-trim', () => {
+      const len = document.getElementById('param-beam-trimlen');
+      const node = document.getElementById('param-beam-trimnode');
+      if (len) len.value = '1.0';
+      if (node) node.value = 'end';
+    });
+
+    registerResetHandler('btn-reset-beam-reverse', () => {
+      // No input controls
+    });
+
+    registerResetHandler('btn-reset-beam-mirror', () => {
+      const plane = document.getElementById('param-beam-mplane');
+      const coord = document.getElementById('param-beam-mcoord');
+      const mode = document.getElementById('param-beam-mmode');
+      if (plane) plane.value = 'YZ';
+      if (coord) coord.value = '0.0';
+      if (mode) mode.value = 'copy';
+    });
+
+    registerResetHandler('btn-reset-beam-delete', () => {
+      const check = document.getElementById('param-beam-delconfirm');
+      if (check) check.checked = false;
+    });
+  }
+
   window.showToast = showToast;
   window.updateMatSecTabUI = updateMatSecTabUI;
+
+  // Expose bindings for tests or init
+  window.bindOperationsEvents = bindOperationsEvents;
 
 })();
