@@ -1025,7 +1025,7 @@
         <div class="frame-workspace-grid">
           
           <!-- Left Panel: Interactive 3D Viewport & Results Tabs -->
-          <section class="frame-left-panel" style="display: flex; flex-direction: column; gap: 20px; height: 100%;">
+          <section class="frame-left-panel" style="display: flex; flex-direction: column; gap: 10px; height: 100%;">
             
             <!-- WebGL 3D Viewport (takes majority of height) -->
             <div class="card cursor-select-node" id="frame-viewport-card" style="position: relative; overflow: hidden; padding: 0; height: 500px; min-height: 450px;">
@@ -1157,8 +1157,9 @@
 
             <!-- Bottom Window: Result Tables -->
             <div class="card" id="frame-results-tables-card" style="height: 250px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; padding: 12px; margin-top: 0;">
+              <h4 style="font-size: 0.78rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 8px; color: var(--text-primary); margin-top: 0;">Analysis Results</h4>
               <!-- Tabs Header -->
-              <div class="frame-tabs" id="frame-results-tabs-header" style="grid-template-columns: repeat(6, 1fr) !important; margin-bottom: 12px !important;">
+              <div class="frame-tabs" id="frame-results-tabs-header" style="grid-template-columns: repeat(6, 1fr) !important; margin-bottom: 8px !important;">
                 <span class="btn-subtab active disabled" id="btn-tab-res-displacements" style="cursor: pointer; opacity: 0.5; pointer-events: none;">Displacements</span>
                 <span class="btn-subtab disabled" id="btn-tab-res-reactions" style="cursor: pointer; opacity: 0.5; pointer-events: none;">Support Reactions</span>
                 <span class="btn-subtab disabled" id="btn-tab-res-axial" style="cursor: pointer; opacity: 0.5; pointer-events: none;">Axial Forces</span>
