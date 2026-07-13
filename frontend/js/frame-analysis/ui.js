@@ -380,6 +380,8 @@
               p.style.display = (t.panelId === tab.panelId) ? 'block' : 'none';
             }
           });
+
+          scrollSelectedResultsIntoView();
         });
       }
     });
@@ -1361,6 +1363,111 @@
       if (dispTab && !dispTab.classList.contains('active')) {
         dispTab.click();
       }
+
+      // 5. Sync selection highlights and bind click events to Results Tables
+      
+      // Node-based: Displacements Table
+      const resDispRows = document.querySelectorAll('#table-res-displacements tbody tr');
+      resDispRows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          const rowNodeId = firstCell.innerText.trim();
+          const isSelected = window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId);
+          if (isSelected) {
+            row.classList.add('selected-row');
+          } else {
+            row.classList.remove('selected-row');
+          }
+          
+          row.onclick = (e) => {
+            const isMulti = e.ctrlKey || e.shiftKey;
+            window.FrameCanvas.selectNode(rowNodeId, isMulti);
+          };
+        }
+      });
+
+      // Node-based (Supports): Support Reactions Table
+      const resReactRows = document.querySelectorAll('#table-res-reactions tbody tr');
+      resReactRows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          const rowNodeId = firstCell.innerText.trim();
+          const isSelected = window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId);
+          if (isSelected) {
+            row.classList.add('selected-row');
+          } else {
+            row.classList.remove('selected-row');
+          }
+          
+          row.onclick = (e) => {
+            const isMulti = e.ctrlKey || e.shiftKey;
+            window.FrameCanvas.selectSupport(rowNodeId, isMulti);
+            window.FrameCanvas.selectNode(rowNodeId, isMulti);
+          };
+        }
+      });
+
+      // Beam-based Results Tables
+      const beamTables = [
+        '#table-res-axial',
+        '#table-res-shear',
+        '#table-res-moments',
+        '#table-res-torsion'
+      ];
+      beamTables.forEach(tableSelector => {
+        const resBeamRows = document.querySelectorAll(`${tableSelector} tbody tr`);
+        resBeamRows.forEach(row => {
+          const firstCell = row.querySelector('td');
+          if (firstCell) {
+            const rowMemberId = firstCell.innerText.trim();
+            const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
+            if (isSelected) {
+              row.classList.add('selected-row');
+            } else {
+              row.classList.remove('selected-row');
+            }
+            
+            row.onclick = (e) => {
+              const isMulti = e.ctrlKey || e.shiftKey;
+              window.FrameCanvas.selectMember(rowMemberId, isMulti);
+            };
+          }
+        });
+      });
+    }
+  }
+
+  function ensureActiveResultsTabCategory(type) {
+    const activeTab = document.querySelector('#frame-results-tabs-header .btn-subtab.active');
+    if (!activeTab) return;
+    
+    const activeId = activeTab.id;
+    if (type === 'node') {
+      if (activeId !== 'btn-tab-res-displacements' && activeId !== 'btn-tab-res-reactions') {
+        const target = document.getElementById('btn-tab-res-displacements');
+        if (target && !target.classList.contains('disabled')) target.click();
+      }
+    } else if (type === 'support') {
+      if (activeId !== 'btn-tab-res-reactions') {
+        const target = document.getElementById('btn-tab-res-reactions');
+        if (target && !target.classList.contains('disabled')) target.click();
+      }
+    } else if (type === 'member') {
+      const memberTabs = ['btn-tab-res-axial', 'btn-tab-res-shear', 'btn-tab-res-moments', 'btn-tab-res-torsion'];
+      if (!memberTabs.includes(activeId)) {
+        const target = document.getElementById('btn-tab-res-axial');
+        if (target && !target.classList.contains('disabled')) target.click();
+      }
+    }
+  }
+
+  function scrollSelectedResultsIntoView() {
+    const activePanel = document.querySelector('.res-tab-content[style*="display: block"]');
+    if (activePanel) {
+      const selectedRow = activePanel.querySelector('tbody tr.selected-row');
+      if (selectedRow) {
+        selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
   }
 
@@ -1693,6 +1800,55 @@
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
+    // Auto-switch Results tab category to node results if valid results exist
+    if (window.FrameModel.results) {
+      ensureActiveResultsTabCategory('node');
+
+      // Sync Displacements Results Table
+      const resDispRows = document.querySelectorAll('#table-res-displacements tbody tr');
+      let targetResDispRow = null;
+      resDispRows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          const rowNodeId = firstCell.innerText.trim();
+          const isSelected = window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId);
+          if (isSelected) {
+            row.classList.add('selected-row');
+            if (rowNodeId === nodeId) {
+              targetResDispRow = row;
+            }
+          } else {
+            row.classList.remove('selected-row');
+          }
+        }
+      });
+      if (targetResDispRow) {
+        targetResDispRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      // Sync Support Reactions Results Table
+      const resReactRows = document.querySelectorAll('#table-res-reactions tbody tr');
+      let targetResReactRow = null;
+      resReactRows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          const rowNodeId = firstCell.innerText.trim();
+          const isSelected = window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId);
+          if (isSelected) {
+            row.classList.add('selected-row');
+            if (rowNodeId === nodeId) {
+              targetResReactRow = row;
+            }
+          } else {
+            row.classList.remove('selected-row');
+          }
+        }
+      });
+      if (targetResReactRow) {
+        targetResReactRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
     const startSel = document.getElementById('member-input-start');
     const endSel = document.getElementById('member-input-end');
     if (startSel && endSel && (startSel.value === 'select-in-model' || endSel.value === 'select-in-model')) {
@@ -1869,6 +2025,40 @@
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
+    // Auto-switch Results tab category to member results if valid results exist
+    if (window.FrameModel.results) {
+      ensureActiveResultsTabCategory('member');
+
+      const beamResultTables = [
+        '#table-res-axial',
+        '#table-res-shear',
+        '#table-res-moments',
+        '#table-res-torsion'
+      ];
+      beamResultTables.forEach(tableSelector => {
+        const resBeamRows = document.querySelectorAll(`${tableSelector} tbody tr`);
+        let targetResRow = null;
+        resBeamRows.forEach(row => {
+          const firstCell = row.querySelector('td');
+          if (firstCell) {
+            const rowMemberId = firstCell.innerText.trim();
+            const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
+            if (isSelected) {
+              row.classList.add('selected-row');
+              if (rowMemberId === memberId) {
+                targetResRow = row;
+              }
+            } else {
+              row.classList.remove('selected-row');
+            }
+          }
+        });
+        if (targetResRow) {
+          targetResRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+    }
+
     updateMatSecTabUI();
   };
 
@@ -1880,9 +2070,12 @@
       const firstCell = row.querySelector('td');
       if (firstCell) {
         const rowNodeId = firstCell.innerText.trim();
-        if (rowNodeId === nodeId) {
+        const isSelected = window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId);
+        if (isSelected) {
           row.classList.add('selected-row');
-          targetRow = row;
+          if (rowNodeId === nodeId) {
+            targetRow = row;
+          }
         } else {
           row.classList.remove('selected-row');
         }
@@ -1891,8 +2084,33 @@
 
     if (targetRow) {
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    } else {
-      tableRows.forEach(row => row.classList.remove('selected-row'));
+    }
+
+    // Auto-switch Results tab category to support results if valid results exist
+    if (window.FrameModel.results) {
+      ensureActiveResultsTabCategory('support');
+
+      // Sync Support Reactions Results Table
+      const resReactRows = document.querySelectorAll('#table-res-reactions tbody tr');
+      let targetResReactRow = null;
+      resReactRows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (firstCell) {
+          const rowNodeId = firstCell.innerText.trim();
+          const isSelected = window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId);
+          if (isSelected) {
+            row.classList.add('selected-row');
+            if (rowNodeId === nodeId) {
+              targetResReactRow = row;
+            }
+          } else {
+            row.classList.remove('selected-row');
+          }
+        }
+      });
+      if (targetResReactRow) {
+        targetResReactRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
     }
   };
 
