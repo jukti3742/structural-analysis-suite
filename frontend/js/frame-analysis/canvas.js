@@ -22,6 +22,286 @@
     load: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28' fill='none'><path d='M1,1 L1,18 L6,13 L10,21 L13,19 L9,12 L14,12 Z' fill='white' stroke='black' stroke-width='1.5'/><path d='M16,5 L16,18.5 M11.5,14 L16,19.5 L20.5,14' stroke='black' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'/><path d='M16,5 L16,18.5 M11.5,14 L16,19.5 L20.5,14' stroke='%23f1c40f' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>\") 1 1, crosshair"
   };
 
+  function draw2DOverlays(nodes, members, supports, results) {
+    if (!window.FrameModel) return;
+    nodes = nodes || Object.values(window.FrameModel.nodes);
+    members = members || Object.values(window.FrameModel.members);
+    supports = supports || window.FrameModel.getSupportList();
+    results = results || window.FrameModel.results;
+
+    const overlayCanvas = document.getElementById('frame-labels-overlay');
+    if (!overlayCanvas || !container || !camera) return;
+    
+    const rect = container.getBoundingClientRect();
+    if (overlayCanvas.width !== rect.width || overlayCanvas.height !== rect.height) {
+      overlayCanvas.width = rect.width;
+      overlayCanvas.height = rect.height;
+    }
+    const ctx = overlayCanvas.getContext('2d');
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    
+    // Project function
+    const project = (x, y, z) => {
+      const vec = new THREE.Vector3(x, y, z);
+      vec.project(camera);
+      return {
+        x: ((vec.x + 1) * rect.width) / 2,
+        y: (-(vec.y - 1) * rect.height) / 2,
+        z: vec.z
+      };
+    };
+    
+    const showNodes = document.getElementById('toggle-show-nodes')?.checked;
+    const showBeams = document.getElementById('toggle-show-beams')?.checked;
+    const showAxes = document.getElementById('toggle-show-axes')?.checked;
+    const showDimensions = document.getElementById('toggle-show-dimensions')?.checked;
+    const showReactions = document.getElementById('toggle-show-reactions')?.checked;
+    
+    // 1. Node Numbers
+    if (showNodes) {
+      nodes.forEach(n => {
+        const pt = project(n.x, n.y, n.z);
+        if (pt.z > 1) return; // behind camera
+        
+        ctx.font = 'bold 9px sans-serif';
+        const label = `${n.id}`;
+        const textWidth = ctx.measureText(label).width;
+        
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.strokeStyle = 'rgba(241, 196, 15, 0.7)';
+        ctx.lineWidth = 1;
+        
+        const px = pt.x;
+        const py = pt.y - 14;
+        const w = textWidth + 8;
+        const h = 14;
+        
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(px - w/2, py - h/2, w, h, 4);
+        else ctx.rect(px - w/2, py - h/2, w, h);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.fillStyle = '#f1c40f';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, px, py);
+      });
+    }
+    
+    // 2. Beam Numbers
+    if (showBeams) {
+      members.forEach(m => {
+        const nStart = window.FrameModel.nodes[m.startNode];
+        const nEnd = window.FrameModel.nodes[m.endNode];
+        if (!nStart || !nEnd) return;
+        
+        const midX = (nStart.x + nEnd.x) / 2;
+        const midY = (nStart.y + nEnd.y) / 2;
+        const midZ = (nStart.z + nEnd.z) / 2;
+        
+        const pt = project(midX, midY, midZ);
+        if (pt.z > 1) return;
+        
+        ctx.font = 'bold 9px sans-serif';
+        const label = `${m.id}`;
+        const textWidth = ctx.measureText(label).width;
+        
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = 'rgba(70, 130, 180, 0.8)';
+        ctx.lineWidth = 1.2;
+        
+        const px = pt.x;
+        const py = pt.y;
+        const w = textWidth + 10;
+        const h = 14;
+        
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(px - w/2, py - h/2, w, h, 4);
+        else ctx.rect(px - w/2, py - h/2, w, h);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, px, py);
+      });
+    }
+    
+    // 3. Local Axes
+    if (showAxes) {
+      members.forEach(m => {
+        const nStart = window.FrameModel.nodes[m.startNode];
+        const nEnd = window.FrameModel.nodes[m.endNode];
+        if (!nStart || !nEnd) return;
+        
+        const midX = (nStart.x + nEnd.x) / 2;
+        const midY = (nStart.y + nEnd.y) / 2;
+        const midZ = (nStart.z + nEnd.z) / 2;
+        
+        const startPt = project(midX, midY, midZ);
+        if (startPt.z > 1) return;
+        
+        const dx = nEnd.x - nStart.x;
+        const dy = nEnd.y - nStart.y;
+        const dz = nEnd.z - nStart.z;
+        const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        const ux = dx/len;
+        const uy = dy/len;
+        const uz = dz/len;
+        
+        let py_x = -uy;
+        let py_y = ux;
+        let py_z = 0;
+        if (Math.abs(ux) < 0.01 && Math.abs(uy) < 0.01) {
+          py_x = 1;
+          py_y = 0;
+          py_z = 0;
+        } else {
+          const py_len = Math.sqrt(py_x*py_x + py_y*py_y);
+          py_x /= py_len;
+          py_y /= py_len;
+        }
+        
+        const pz_x = uy*py_z - uz*py_y;
+        const pz_y = uz*py_x - ux*py_z;
+        const pz_z = ux*py_y - uy*py_x;
+        
+        const scaleVal = 0.35;
+        const ptX = project(midX + ux*scaleVal, midY + uy*scaleVal, midZ + uz*scaleVal);
+        const ptY = project(midX + py_x*scaleVal, midY + py_y*scaleVal, midZ + py_z*scaleVal);
+        const ptZ = project(midX + pz_x*scaleVal, midY + pz_y*scaleVal, midZ + pz_z*scaleVal);
+        
+        const drawArrow = (from, to, color) => {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          ctx.lineTo(to.x, to.y);
+          ctx.stroke();
+          
+          const headlen = 5;
+          const angle = Math.atan2(to.y - from.y, to.x - from.x);
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.moveTo(to.x, to.y);
+          ctx.lineTo(to.x - headlen * Math.cos(angle - Math.PI / 6), to.y - headlen * Math.sin(angle - Math.PI / 6));
+          ctx.lineTo(to.x - headlen * Math.cos(angle + Math.PI / 6), to.y - headlen * Math.sin(angle + Math.PI / 6));
+          ctx.fill();
+        };
+        
+        drawArrow(startPt, ptX, '#ef4444');
+        drawArrow(startPt, ptY, '#22c55e');
+        drawArrow(startPt, ptZ, '#3b82f6');
+      });
+    }
+    
+    // 4. Dimensions
+    if (showDimensions) {
+      members.forEach(m => {
+        const nStart = window.FrameModel.nodes[m.startNode];
+        const nEnd = window.FrameModel.nodes[m.endNode];
+        if (!nStart || !nEnd) return;
+        
+        const midX = (nStart.x + nEnd.x) / 2;
+        const midY = (nStart.y + nEnd.y) / 2;
+        const midZ = (nStart.z + nEnd.z) / 2;
+        
+        const p1 = project(nStart.x, nStart.y, nStart.z);
+        const p2 = project(nEnd.x, nEnd.y, nEnd.z);
+        const pm = project(midX, midY, midZ);
+        if (p1.z > 1 || p2.z > 1) return;
+        
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.sqrt(dx*dx + dy*dy);
+        if (len < 5) return;
+        const nx = -dy/len;
+        const ny = dx/len;
+        
+        const offset = 20;
+        const d1x = p1.x + nx * offset;
+        const d1y = p1.y + ny * offset;
+        const d2x = p2.x + nx * offset;
+        const d2y = p2.y + ny * offset;
+        
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(d1x, d1y);
+        ctx.lineTo(d2x, d2y);
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(d1x, d1y);
+        ctx.moveTo(p2.x, p2.y);
+        ctx.lineTo(d2x, d2y);
+        ctx.stroke();
+        
+        const tickSize = 4;
+        ctx.beginPath();
+        ctx.moveTo(d1x - ny*tickSize - nx*tickSize, d1y + nx*tickSize - ny*tickSize);
+        ctx.lineTo(d1x + ny*tickSize + nx*tickSize, d1y - nx*tickSize + ny*tickSize);
+        ctx.moveTo(d2x - ny*tickSize - nx*tickSize, d2y + nx*tickSize - ny*tickSize);
+        ctx.lineTo(d2x + ny*tickSize + nx*tickSize, d2y - nx*tickSize + ny*tickSize);
+        ctx.stroke();
+        
+        const length3D = Math.sqrt(
+          (nEnd.x - nStart.x)**2 + 
+          (nEnd.y - nStart.y)**2 + 
+          (nEnd.z - nStart.z)**2
+        );
+        const label = `${length3D.toFixed(2)} m`;
+        ctx.font = '9px sans-serif';
+        const tw = ctx.measureText(label).width;
+        
+        const tx = pm.x + nx * offset;
+        const ty = pm.y + ny * offset;
+        
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(tx - tw/2 - 2, ty - 6, tw + 4, 12);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, tx, ty);
+      });
+    }
+    
+    // 5. Support Reactions
+    if (showReactions && results && results.reactions) {
+      results.reactions.forEach(r => {
+        const node = window.FrameModel.nodes[r.nodeId];
+        if (!node) return;
+        
+        const pt = project(node.x, node.y, node.z);
+        if (pt.z > 1) return;
+        
+        let labels = [];
+        if (Math.abs(r.FX) > 1) labels.push(`Fx: ${(r.FX/1000.0).toFixed(1)} kN`);
+        if (Math.abs(r.FY) > 1) labels.push(`Fy: ${(r.FY/1000.0).toFixed(1)} kN`);
+        if (Math.abs(r.FZ) > 1) labels.push(`Fz: ${(r.FZ/1000.0).toFixed(1)} kN`);
+        if (Math.abs(r.MZ) > 1) labels.push(`Mz: ${(r.MZ/1000.0).toFixed(1)} kNm`);
+        
+        if (labels.length === 0) return;
+        
+        ctx.font = 'bold 9px sans-serif';
+        labels.forEach((lbl, idx) => {
+          const tw = ctx.measureText(lbl).width;
+          const px = pt.x + 20;
+          const py = pt.y + 12 + idx * 12;
+          
+          ctx.fillStyle = 'rgba(220, 38, 38, 0.85)';
+          ctx.fillRect(px - 4, py - 6, tw + 8, 12);
+          
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(lbl, px, py);
+        });
+      });
+    }
+  }
+
   const FrameCanvas = {
     selectedNodeId: null,
     selectedNodeIds: selectedNodeIds,
@@ -726,6 +1006,7 @@
         }
         renderer.render(scene, camera);
         updateAxesIndicator();
+        draw2DOverlays();
       }
     },
 
@@ -762,9 +1043,20 @@
       const results = window.FrameModel.results;
 
       // Toggle checkboxes
-      const showLoads = document.getElementById('toggle-layer-loads') ? document.getElementById('toggle-layer-loads').checked : true;
-      const showReactions = document.getElementById('toggle-layer-reactions') ? document.getElementById('toggle-layer-reactions').checked : true;
-      const diagramLayer = document.getElementById('diagram-layer-selector') ? document.getElementById('diagram-layer-selector').value : 'none';
+      const showLoads = document.getElementById('toggle-show-loads') ? document.getElementById('toggle-show-loads').checked : true;
+      const showSupports = document.getElementById('toggle-show-supports') ? document.getElementById('toggle-show-supports').checked : true;
+      const showReactions = document.getElementById('toggle-show-reactions') ? document.getElementById('toggle-show-reactions').checked : true;
+      
+      let diagramLayer = 'none';
+      if (document.getElementById('toggle-show-displ-x')?.checked) diagramLayer = 'axial';
+      else if (document.getElementById('toggle-show-displ-y')?.checked) diagramLayer = 'deflection_Y';
+      else if (document.getElementById('toggle-show-displ-z')?.checked) diagramLayer = 'deflection_Z';
+      else if (document.getElementById('toggle-show-axial')?.checked) diagramLayer = 'axial';
+      else if (document.getElementById('toggle-show-shear')?.checked) diagramLayer = 'shear_Y';
+      else if (document.getElementById('toggle-show-torsion')?.checked) diagramLayer = 'torque';
+      else if (document.getElementById('toggle-show-moment-x')?.checked) diagramLayer = 'torque';
+      else if (document.getElementById('toggle-show-moment-y')?.checked) diagramLayer = 'moment_Y';
+      else if (document.getElementById('toggle-show-moment-z')?.checked) diagramLayer = 'moment_Z';
 
       // 1. Draw Members
       members.forEach(m => {
@@ -810,42 +1102,44 @@
       });
 
       // 3. Draw Supports
-      supports.forEach(s => {
-        const node = window.FrameModel.nodes[s.nodeId];
-        if (!node) return;
+      if (showSupports) {
+        supports.forEach(s => {
+          const node = window.FrameModel.nodes[s.nodeId];
+          if (!node) return;
 
-        // Draw support shape based on restraints
-        const restraints = s.restraints;
-        const isFixed = restraints.every(r => r === true);
-        const isPinned = restraints[0] === true && restraints[1] === true && restraints[2] === true && restraints.slice(3).every(r => r === false);
-        const isRollerY = restraints[1] === true && restraints[0] === false && restraints[2] === false;
+          // Draw support shape based on restraints
+          const restraints = s.restraints;
+          const isFixed = restraints.every(r => r === true);
+          const isPinned = restraints[0] === true && restraints[1] === true && restraints[2] === true && restraints.slice(3).every(r => r === false);
+          const isRollerY = restraints[1] === true && restraints[0] === false && restraints[2] === false;
 
-        let supportMesh;
-        const isSelected = (s.nodeId === selectedSupportId || selectedSupportIds.has(s.nodeId));
-        const supportColor = isSelected ? 0xf1c40f : (isFixed ? 0xd9534f : (isPinned ? 0xf0ad4e : 0x5bc0de));
+          let supportMesh;
+          const isSelected = (s.nodeId === selectedSupportId || selectedSupportIds.has(s.nodeId));
+          const supportColor = isSelected ? 0xf1c40f : (isFixed ? 0xd9534f : (isPinned ? 0xf0ad4e : 0x5bc0de));
 
-        if (isFixed) {
-          // Fixed support: Box base shape
-          const geometry = new THREE.BoxGeometry(0.3, 0.15, 0.3);
-          const material = new THREE.MeshLambertMaterial({ color: supportColor });
-          supportMesh = new THREE.Mesh(geometry, material);
-          supportMesh.position.set(node.x, node.y - 0.075, node.z);
-        } else if (isPinned) {
-          // Pinned support: Cone shape pointing up to node
-          const geometry = new THREE.ConeGeometry(0.2, 0.3, 4);
-          const material = new THREE.MeshLambertMaterial({ color: supportColor });
-          supportMesh = new THREE.Mesh(geometry, material);
-          supportMesh.position.set(node.x, node.y - 0.15, node.z);
-        } else {
-          // Roller or Custom support: Cylinder shape
-          const geometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 8);
-          const material = new THREE.MeshLambertMaterial({ color: supportColor });
-          supportMesh = new THREE.Mesh(geometry, material);
-          supportMesh.position.set(node.x, node.y - 0.05, node.z);
-        }
-        supportMesh.userData = { supportNodeId: s.nodeId };
-        objectsGroup.add(supportMesh);
-      });
+          if (isFixed) {
+            // Fixed support: Box base shape
+            const geometry = new THREE.BoxGeometry(0.3, 0.15, 0.3);
+            const material = new THREE.MeshLambertMaterial({ color: supportColor });
+            supportMesh = new THREE.Mesh(geometry, material);
+            supportMesh.position.set(node.x, node.y - 0.075, node.z);
+          } else if (isPinned) {
+            // Pinned support: Cone shape pointing up to node
+            const geometry = new THREE.ConeGeometry(0.2, 0.3, 4);
+            const material = new THREE.MeshLambertMaterial({ color: supportColor });
+            supportMesh = new THREE.Mesh(geometry, material);
+            supportMesh.position.set(node.x, node.y - 0.15, node.z);
+          } else {
+            // Roller or Custom support: Cylinder shape
+            const geometry = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 8);
+            const material = new THREE.MeshLambertMaterial({ color: supportColor });
+            supportMesh = new THREE.Mesh(geometry, material);
+            supportMesh.position.set(node.x, node.y - 0.05, node.z);
+          }
+          supportMesh.userData = { supportNodeId: s.nodeId };
+          objectsGroup.add(supportMesh);
+        });
+      }
 
       // 4. Draw Loads
       if (showLoads) {
@@ -962,6 +1256,9 @@
           }
         });
       }
+
+      // 5. Render 2D overlays (labels, dimensions, reactions)
+      draw2DOverlays(nodes, members, supports, results);
     },
 
     drawMemberDiagram: function(p1, p2, points, type) {
@@ -970,39 +1267,59 @@
       const L = dir.length();
       dir.normalize();
 
-      // 2. Form perpendicular vector in plane (for drawing diagrams offset)
-      // Usually, diagrams are drawn perpendicular to member.
-      // If member is along X (e.g. beam), perp is along Y (up).
-      // If member is along Y (e.g. column), perp is along X (left).
+      // 2. Form perpendicular vectors for drawing diagrams offset
       let perp = new THREE.Vector3(0, 1, 0);
       if (Math.abs(dir.y) > 0.9) {
         perp.set(1, 0, 0);
       } else {
         perp.crossVectors(dir, new THREE.Vector3(0, 0, 1)).normalize();
       }
+      
+      let perpZ = new THREE.Vector3().crossVectors(dir, perp).normalize();
 
       // 3. Collect offset points along member length
       const diagramPoints = [];
-      
-      // Multipliers to scale diagrams visually on canvas
       let scale = 1.0;
-      if (type === 'deflection') scale = 100.0; // Scale mm deflections up
-      else if (type === 'moment_Z') scale = 0.00005; // Scale kNm moments down
-      else if (type === 'shear_Y') scale = 0.00005;  // Scale kN shear down
-      else if (type === 'axial') scale = 0.00005;
+      
+      if (type.startsWith('deflection')) {
+        scale = 100.0; // Scale mm deflections up
+      } else {
+        scale = 0.00005; // Scale kNm/kN forces/moments down
+      }
 
       points.forEach(pt => {
-        // Find base point along member axis
         const basePt = p1.clone().add(dir.clone().multiplyScalar(pt.x));
         
         let val = 0.0;
-        if (type === 'deflection') val = pt.deflection_Y;
-        else if (type === 'moment_Z') val = pt.moment_Z;
-        else if (type === 'shear_Y') val = pt.shear_Y;
-        else if (type === 'axial') val = pt.axial;
+        let usePerp = perp;
+        
+        if (type === 'deflection_Y') {
+          val = pt.deflection_Y;
+          usePerp = perp;
+        } else if (type === 'deflection_Z') {
+          val = pt.deflection_Z;
+          usePerp = perpZ;
+        } else if (type === 'axial') {
+          val = pt.axial;
+          usePerp = perp;
+        } else if (type === 'shear_Y') {
+          val = pt.shear_Y;
+          usePerp = perp;
+        } else if (type === 'shear_Z') {
+          val = pt.shear_Z;
+          usePerp = perpZ;
+        } else if (type === 'moment_Y') {
+          val = pt.moment_Y;
+          usePerp = perpZ;
+        } else if (type === 'moment_Z') {
+          val = pt.moment_Z;
+          usePerp = perp;
+        } else if (type === 'torque') {
+          val = pt.torque;
+          usePerp = perp;
+        }
 
-        // Offset perp to axis
-        const offsetPt = basePt.clone().add(perp.clone().multiplyScalar(val * scale));
+        const offsetPt = basePt.clone().add(usePerp.clone().multiplyScalar(val * scale));
         diagramPoints.push(offsetPt);
       });
 
@@ -1010,21 +1327,22 @@
       const geometry = new THREE.BufferGeometry().setFromPoints(diagramPoints);
       
       let color = 0x00ff00; // green for deflection
-      if (type === 'moment_Z') color = 0xff00ff; // magenta for moment
-      else if (type === 'shear_Y') color = 0xffff00;  // yellow for shear
+      if (type.startsWith('moment')) color = 0xff00ff; // magenta for moment
+      else if (type.startsWith('shear')) color = 0xffff00;  // yellow for shear
       else if (type === 'axial') color = 0x00ffff;   // cyan for axial
+      else if (type === 'torque') color = 0xffa500;  // orange for torsion
 
       const material = new THREE.LineBasicMaterial({ color: color, linewidth: 2 });
       const line = new THREE.Line(geometry, material);
       objectsGroup.add(line);
 
-      // 5. Draw connecting lines from axis to diagram curve at start, end, and middle
+      // 5. Draw connecting lines
       for (let i = 0; i < diagramPoints.length; i += 10) {
         const basePt = p1.clone().add(dir.clone().multiplyScalar(points[i].x));
         const geomConn = new THREE.BufferGeometry().setFromPoints([basePt, diagramPoints[i]]);
         const matConn = new THREE.LineDashedMaterial({ color: color, dashSize: 0.1, gapSize: 0.1 });
         const connLine = new THREE.Line(geomConn, matConn);
-        connLine.computeLineDistances(); // Required for dashed lines
+        connLine.computeLineDistances();
         objectsGroup.add(connLine);
       }
     }

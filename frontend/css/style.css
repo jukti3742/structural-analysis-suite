@@ -1469,10 +1469,10 @@ input:checked + .switch-slider:before {
   display: grid;
   grid-template-columns: 1fr 340px;
   gap: 20px;
-  height: calc(100vh - 120px);
-  min-height: 580px;
-  max-height: 850px;
-  overflow: hidden;
+  height: auto;
+  min-height: 750px;
+  max-height: none;
+  overflow: visible;
 }
 .frame-left-panel {
   display: flex;
@@ -1646,21 +1646,26 @@ input:checked + .switch-slider:before {
   box-shadow: 0 0 10px rgba(99, 102, 241, 0.2) !important;
 }
 
-/* Proper visible grid lines for tables in Active Model Elements */
-#frame-list-tables-container table.data-table {
+/* Proper visible grid lines for tables in Active Model Elements & Results Card */
+#frame-list-tables-container table.data-table,
+#frame-results-tables-card table.data-table {
   border-collapse: collapse;
   width: 100%;
   border: 1px solid var(--border-color);
+  font-size: 0.72rem !important; /* Unified font-size matching properties tables */
 }
 #frame-list-tables-container table.data-table th,
-#frame-list-tables-container table.data-table td {
+#frame-list-tables-container table.data-table td,
+#frame-results-tables-card table.data-table th,
+#frame-results-tables-card table.data-table td {
   border: 1px solid var(--border-color) !important;
-  padding: 5px 8px !important;
+  padding: 8px 12px !important; /* Adequate row height and cell padding */
   background-color: var(--bg-secondary) !important; /* Non-editable (read-only) cells get light grey background by default */
   color: var(--text-primary);
   text-align: left;
 }
-#frame-list-tables-container table.data-table th {
+#frame-list-tables-container table.data-table th,
+#frame-results-tables-card table.data-table th {
   background-color: var(--bg-secondary) !important;
   font-weight: 600;
 }
@@ -1776,6 +1781,19 @@ input:checked + .switch-slider:before {
   -webkit-appearance: menulist !important;
   -moz-appearance: menulist !important;
   appearance: menulist !important;
+}
+
+.btn-analyse-required {
+  background: var(--success, #10b981) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3) !important;
+  border: none !important;
+}
+
+.btn-analyse-required:hover {
+  background: #059669 !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5) !important;
+  color: #ffffff !important;
 }
 
 

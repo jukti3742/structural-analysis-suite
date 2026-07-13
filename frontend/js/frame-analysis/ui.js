@@ -33,6 +33,145 @@
     }
   }
   
+  
+  // Selected display units for results (Displacement, Rotation, Force, Moment Force, Moment Length)
+  window.ResultUnits = {
+    disp: 'mm',
+    rot: 'rad',
+    force: 'kN',
+    momentForce: 'kN',
+    momentLen: 'm'
+  };
+
+  // Try to load saved result units from localStorage
+  const savedResultUnits = localStorage.getItem('apex_result_units');
+  if (savedResultUnits) {
+    try {
+      Object.assign(window.ResultUnits, JSON.parse(savedResultUnits));
+    } catch (e) {}
+  }
+
+  // Conversion factors relative to solver output base units (m, rad, N, N-m)
+  const resultFactors = {
+    // base: m
+    disp: {
+      m: 1.0,
+      cm: 100.0,
+      mm: 1000.0
+    },
+    // base: rad
+    rot: {
+      rad: 1.0,
+      deg: 180.0 / Math.PI
+    },
+    // base: N
+    force: {
+      N: 1.0,
+      kN: 0.001,
+      MN: 1e-6,
+      kgf: 0.101971621,
+      tf: 0.000101971621,
+      MT: 0.000101971621
+    },
+    // base: m
+    length: {
+      m: 1.0,
+      mm: 1000.0,
+      cm: 100.0,
+      ft: 3.2808399,
+      in: 39.3700787
+    }
+  };
+
+  function convertResult(val, type) {
+    if (val === null || val === undefined || isNaN(val)) return 0;
+    if (type === 'disp') {
+      const u = window.ResultUnits.disp;
+      return val * (resultFactors.disp[u] || 1.0);
+    }
+    if (type === 'rot') {
+      const u = window.ResultUnits.rot;
+      return val * (resultFactors.rot[u] || 1.0);
+    }
+    if (type === 'force') {
+      const u = window.ResultUnits.force;
+      return val * (resultFactors.force[u] || 1.0);
+    }
+    if (type === 'moment') {
+      const uf = window.ResultUnits.momentForce;
+      const ul = window.ResultUnits.momentLen;
+      const fFactor = resultFactors.force[uf] || 1.0;
+      const lFactor = resultFactors.length[ul] || 1.0;
+      return val * fFactor * lFactor;
+    }
+    return val;
+  }
+
+  function syncResultUnitDropdowns() {
+    document.querySelectorAll('.res-unit-disp').forEach(select => {
+      select.value = window.ResultUnits.disp;
+    });
+    document.querySelectorAll('.res-unit-rot').forEach(select => {
+      select.value = window.ResultUnits.rot;
+    });
+    document.querySelectorAll('.res-unit-force').forEach(select => {
+      select.value = window.ResultUnits.force;
+    });
+    document.querySelectorAll('.res-unit-moment-force').forEach(select => {
+      select.value = window.ResultUnits.momentForce;
+    });
+    document.querySelectorAll('.res-unit-moment-len').forEach(select => {
+      select.value = window.ResultUnits.momentLen;
+    });
+  }
+
+  function bindResultUnitsEvents() {
+    const bindClassChange = (className, key) => {
+      document.querySelectorAll(`.${className}`).forEach(select => {
+        select.addEventListener('change', (e) => {
+          window.ResultUnits[key] = e.target.value;
+          localStorage.setItem('apex_result_units', JSON.stringify(window.ResultUnits));
+          
+          // Sync all dropdowns of this category
+          syncResultUnitDropdowns();
+          
+          // Repopulate results tables with converted values
+          if (window.FrameModel && window.FrameModel.results) {
+            populateResultsTables(window.FrameModel.results);
+          }
+        });
+      });
+    };
+    
+    bindClassChange('res-unit-disp', 'disp');
+    bindClassChange('res-unit-rot', 'rot');
+    bindClassChange('res-unit-force', 'force');
+    bindClassChange('res-unit-moment-force', 'momentForce');
+    bindClassChange('res-unit-moment-len', 'momentLen');
+  }
+
+  // Wrap window.FrameModel.results to automatically update UI Analyse Model button on changes
+  if (window.FrameModel && !window.FrameModel._resultsWrapped) {
+    let resultsVal = window.FrameModel.results;
+    Object.defineProperty(window.FrameModel, 'results', {
+      get() {
+        return resultsVal;
+      },
+      set(val) {
+        resultsVal = val;
+        const solveBtn = document.getElementById('btn-solve-frame');
+        if (solveBtn) {
+          if (!val) {
+            solveBtn.classList.add('btn-analyse-required');
+          } else {
+            solveBtn.classList.remove('btn-analyse-required');
+          }
+        }
+      }
+    });
+    window.FrameModel._resultsWrapped = true;
+  }
+
   // Initialize the Frame Analysis tab and controls on first load
   window.initFrameAnalysisView = function() {
     // 1. Initialize WebGL Viewport
@@ -44,6 +183,9 @@
       bindUIEvents();
       setupDefaultModel();
     }
+    
+    // Sync unit selector dropdowns
+    syncResultUnitDropdowns();
     
     // 2. Refresh lists and canvas
     refreshAllDropdowns();
@@ -144,10 +286,7 @@
     document.getElementById('btn-view-xy').addEventListener('click', () => window.FrameCanvas.setViewDirection('xy'));
     document.getElementById('btn-view-xz').addEventListener('click', () => window.FrameCanvas.setViewDirection('xz'));
 
-    // Diagram selector change
-    document.getElementById('diagram-layer-selector').addEventListener('change', () => window.FrameCanvas.render());
-    document.getElementById('toggle-layer-loads').addEventListener('change', () => window.FrameCanvas.render());
-    document.getElementById('toggle-layer-reactions').addEventListener('change', () => window.FrameCanvas.render());
+
 
     // Support preset selection dropdown
     document.getElementById('support-presets').addEventListener('change', (e) => {
@@ -210,24 +349,39 @@
 
 
     // Results Tab switching
-    document.getElementById('btn-tab-res-displacements').addEventListener('click', () => {
-      document.getElementById('btn-tab-res-displacements').classList.add('active');
-      document.getElementById('btn-tab-res-displacements').style.color = 'var(--text-primary)';
-      document.getElementById('btn-tab-res-reactions').classList.remove('active');
-      document.getElementById('btn-tab-res-reactions').style.color = 'var(--text-secondary)';
-      
-      document.getElementById('panel-res-displacements').style.display = 'block';
-      document.getElementById('panel-res-reactions').style.display = 'none';
-    });
+    const resTabs = [
+      { btnId: 'btn-tab-res-displacements', panelId: 'panel-res-displacements' },
+      { btnId: 'btn-tab-res-reactions', panelId: 'panel-res-reactions' },
+      { btnId: 'btn-tab-res-axial', panelId: 'panel-res-axial' },
+      { btnId: 'btn-tab-res-shear', panelId: 'panel-res-shear' },
+      { btnId: 'btn-tab-res-moments', panelId: 'panel-res-moments' },
+      { btnId: 'btn-tab-res-torsion', panelId: 'panel-res-torsion' }
+    ];
 
-    document.getElementById('btn-tab-res-reactions').addEventListener('click', () => {
-      document.getElementById('btn-tab-res-reactions').classList.add('active');
-      document.getElementById('btn-tab-res-reactions').style.color = 'var(--text-primary)';
-      document.getElementById('btn-tab-res-displacements').classList.remove('active');
-      document.getElementById('btn-tab-res-displacements').style.color = 'var(--text-secondary)';
-      
-      document.getElementById('panel-res-reactions').style.display = 'block';
-      document.getElementById('panel-res-displacements').style.display = 'none';
+    resTabs.forEach(tab => {
+      const btn = document.getElementById(tab.btnId);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (btn.classList.contains('disabled')) return;
+
+          resTabs.forEach(t => {
+            const b = document.getElementById(t.btnId);
+            const p = document.getElementById(t.panelId);
+            if (b) {
+              if (t.btnId === tab.btnId) {
+                b.classList.add('active');
+                b.style.color = '';
+              } else {
+                b.classList.remove('active');
+                b.style.color = '';
+              }
+            }
+            if (p) {
+              p.style.display = (t.panelId === tab.panelId) ? 'block' : 'none';
+            }
+          });
+        });
+      }
     });
 
     // --- Add Actions ---
@@ -481,6 +635,59 @@
       });
     }
 
+    // Display control checkboxes change listeners to trigger re-renders
+    const displayCheckboxes = [
+      'toggle-show-loads',
+      'toggle-show-supports',
+      'toggle-show-nodes',
+      'toggle-show-beams',
+      'toggle-show-axes',
+      'toggle-show-dimensions',
+      'toggle-show-reactions',
+      'toggle-show-displ-x',
+      'toggle-show-displ-y',
+      'toggle-show-displ-z',
+      'toggle-show-axial',
+      'toggle-show-shear',
+      'toggle-show-torsion',
+      'toggle-show-moment-x',
+      'toggle-show-moment-y',
+      'toggle-show-moment-z'
+    ];
+    
+    displayCheckboxes.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', (e) => {
+          const resultDiagramIds = [
+            'toggle-show-displ-x',
+            'toggle-show-displ-y',
+            'toggle-show-displ-z',
+            'toggle-show-axial',
+            'toggle-show-shear',
+            'toggle-show-torsion',
+            'toggle-show-moment-x',
+            'toggle-show-moment-y',
+            'toggle-show-moment-z'
+          ];
+          
+          // Implement mutual exclusivity: only one result diagram type checked at a time
+          if (resultDiagramIds.includes(id) && e.target.checked) {
+            resultDiagramIds.forEach(otherId => {
+              if (otherId !== id) {
+                const otherEl = document.getElementById(otherId);
+                if (otherEl) otherEl.checked = false;
+              }
+            });
+          }
+          
+          if (window.FrameCanvas) {
+            window.FrameCanvas.render();
+          }
+        });
+      }
+    });
+
     // --- Solve Trigger ---
     document.getElementById('btn-solve-frame').addEventListener('click', async () => {
       const nodesCount = Object.keys(window.FrameModel.nodes).length;
@@ -491,7 +698,10 @@
 
       const solveBtn = document.getElementById('btn-solve-frame');
       solveBtn.setAttribute('disabled', 'true');
-      solveBtn.textContent = 'Solving...';
+      solveBtn.innerHTML = `
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle;"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round"/></svg>
+        Analysing...
+      `;
 
       try {
         const results = await window.FrameAPI.solve();
@@ -499,9 +709,7 @@
         
         // Populate results tables
         populateResultsTables(results);
-        
-        // Enable report
-        document.getElementById('btn-open-frame-report').removeAttribute('disabled');
+        updateTablesDisplay();
         
         // Re-render
         window.FrameCanvas.render();
@@ -511,8 +719,8 @@
       } finally {
         solveBtn.removeAttribute('disabled');
         solveBtn.innerHTML = `
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right: 4px;"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round"/></svg>
-          Solve Frame Analysis
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle;"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round"/></svg>
+          Analyse Model
         `;
       }
     });
@@ -561,17 +769,14 @@
             window.FrameModel.results = null;
             clearedResults = true;
             
-            // Disable report button
-            document.getElementById('btn-open-frame-report').setAttribute('disabled', 'true');
-            
             // Clear results tables
             const tbodyDisp = document.querySelector('#table-res-displacements tbody');
             const tbodyReact = document.querySelector('#table-res-reactions tbody');
             if (tbodyDisp) {
-              tbodyDisp.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No displacements resolved. Click "Solve Frame Analysis".</td></tr>`;
+              tbodyDisp.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No displacements resolved. Click "Analyse Model".</td></tr>`;
             }
             if (tbodyReact) {
-              tbodyReact.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No support reactions resolved. Click "Solve Frame Analysis".</td></tr>`;
+              tbodyReact.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No support reactions resolved. Click "Analyse Model".</td></tr>`;
             }
           }
 
@@ -588,6 +793,7 @@
         }
       }, true);
     }
+    bindResultUnitsEvents();
     bindOperationsEvents();
   }
 
@@ -1081,41 +1287,200 @@
         });
       });
     }
+
+    // Check if analysis results exist to enable/disable result controls & tabs
+    const results = window.FrameModel.results;
+    const resGroup = document.getElementById('group-result-display-controls');
+    const tabContainer = document.getElementById('frame-results-tabs-header');
+    
+    // Sync Analyse Model button status color
+    const solveBtn = document.getElementById('btn-solve-frame');
+    if (solveBtn) {
+      if (!results) {
+        solveBtn.classList.add('btn-analyse-required');
+      } else {
+        solveBtn.classList.remove('btn-analyse-required');
+      }
+    }
+    
+    if (!results) {
+      // 1. Disable Result display checkboxes
+      if (resGroup) {
+        resGroup.style.opacity = '0.5';
+        resGroup.style.pointerEvents = 'none';
+        resGroup.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.disabled = true;
+          cb.checked = false; // uncheck
+        });
+      }
+      
+      // 3. Disable Results tabs
+      if (tabContainer) {
+        tabContainer.querySelectorAll('.btn-subtab').forEach(tab => {
+          tab.classList.add('disabled');
+          tab.style.opacity = '0.5';
+          tab.style.pointerEvents = 'none';
+        });
+      }
+      
+      // 4. Reset results tables content
+      const resetTbody = (id, colspan, msg) => {
+        const tbody = document.querySelector(`#${id} tbody`);
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="${colspan}" style="text-align: center; color: var(--text-secondary);">${msg}</td></tr>`;
+        }
+      };
+      const msg = "No active analysis results. Click 'Analyse Model'.";
+      resetTbody('table-res-displacements', 7, msg);
+      resetTbody('table-res-reactions', 7, msg);
+      resetTbody('table-res-axial', 4, msg);
+      resetTbody('table-res-shear', 5, msg);
+      resetTbody('table-res-moments', 5, msg);
+      resetTbody('table-res-torsion', 4, msg);
+    } else {
+      // 1. Enable Result display checkboxes
+      if (resGroup) {
+        resGroup.style.opacity = '1.0';
+        resGroup.style.pointerEvents = 'auto';
+        resGroup.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.removeAttribute('disabled');
+        });
+      }
+      
+      // 3. Enable Results tabs
+      if (tabContainer) {
+        tabContainer.querySelectorAll('.btn-subtab').forEach(tab => {
+          tab.classList.remove('disabled');
+          tab.style.opacity = '1.0';
+          tab.style.pointerEvents = 'auto';
+        });
+      }
+
+      // 4. Default to active displacements tab
+      const dispTab = document.getElementById('btn-tab-res-displacements');
+      if (dispTab && !dispTab.classList.contains('active')) {
+        dispTab.click();
+      }
+    }
   }
 
   function populateResultsTables(results) {
+    if (!results) return;
+
     // 1. Displacements
     const tbodyDisp = document.querySelector('#table-res-displacements tbody');
-    if (results.displacements) {
+    if (tbodyDisp && results.displacements) {
       tbodyDisp.innerHTML = results.displacements.map(d => `
         <tr>
           <td><strong>${d.nodeId}</strong></td>
-          <td>${(d.DX * 1000.0).toFixed(3)}</td>
-          <td>${(d.DY * 1000.0).toFixed(3)}</td>
-          <td>${(d.DZ * 1000.0).toFixed(3)}</td>
-          <td>${d.RX.toFixed(5)}</td>
-          <td>${d.RY.toFixed(5)}</td>
-          <td>${d.RZ.toFixed(5)}</td>
+          <td>${convertResult(d.DX, 'disp').toFixed(3)}</td>
+          <td>${convertResult(d.DY, 'disp').toFixed(3)}</td>
+          <td>${convertResult(d.DZ, 'disp').toFixed(3)}</td>
+          <td>${convertResult(d.RX, 'rot').toFixed(5)}</td>
+          <td>${convertResult(d.RY, 'rot').toFixed(5)}</td>
+          <td>${convertResult(d.RZ, 'rot').toFixed(5)}</td>
         </tr>
       `).join('');
     }
 
     // 2. Reactions
     const tbodyReact = document.querySelector('#table-res-reactions tbody');
-    if (results.reactions && results.reactions.length > 0) {
-      tbodyReact.innerHTML = results.reactions.map(r => `
-        <tr>
-          <td><strong>${r.nodeId}</strong></td>
-          <td>${(r.FX / 1000.0).toFixed(2)}</td>
-          <td>${(r.FY / 1000.0).toFixed(2)}</td>
-          <td>${(r.FZ / 1000.0).toFixed(2)}</td>
-          <td>${(r.MX / 1000.0).toFixed(2)}</td>
-          <td>${(r.MY / 1000.0).toFixed(2)}</td>
-          <td>${(r.MZ / 1000.0).toFixed(2)}</td>
-        </tr>
-      `).join('');
-    } else {
-      tbodyReact.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No support node reactions.</td></tr>`;
+    if (tbodyReact) {
+      if (results.reactions && results.reactions.length > 0) {
+        tbodyReact.innerHTML = results.reactions.map(r => `
+          <tr>
+            <td><strong>${r.nodeId}</strong></td>
+            <td>${convertResult(r.FX, 'force').toFixed(2)}</td>
+            <td>${convertResult(r.FY, 'force').toFixed(2)}</td>
+            <td>${convertResult(r.FZ, 'force').toFixed(2)}</td>
+            <td>${convertResult(r.MX, 'moment').toFixed(2)}</td>
+            <td>${convertResult(r.MY, 'moment').toFixed(2)}</td>
+            <td>${convertResult(r.MZ, 'moment').toFixed(2)}</td>
+          </tr>
+        `).join('');
+      } else {
+        tbodyReact.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-secondary);">No support node reactions.</td></tr>`;
+      }
+    }
+
+    // 3. Axial Forces
+    const tbodyAxial = document.querySelector('#table-res-axial tbody');
+    if (tbodyAxial && results.memberForces) {
+      tbodyAxial.innerHTML = results.memberForces.map(m => {
+        const pts = m.points;
+        const start = convertResult(pts[0].axial, 'force');
+        const end = convertResult(pts[pts.length - 1].axial, 'force');
+        const max = convertResult(Math.max(...pts.map(pt => Math.abs(pt.axial))), 'force');
+        return `
+          <tr>
+            <td><strong>${m.memberId}</strong></td>
+            <td>${start.toFixed(2)}</td>
+            <td>${end.toFixed(2)}</td>
+            <td>${max.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 4. Shear Forces
+    const tbodyShear = document.querySelector('#table-res-shear tbody');
+    if (tbodyShear && results.memberForces) {
+      tbodyShear.innerHTML = results.memberForces.map(m => {
+        const pts = m.points;
+        const startVy = convertResult(pts[0].shear_Y, 'force');
+        const endVy = convertResult(pts[pts.length - 1].shear_Y, 'force');
+        const startVz = convertResult(pts[0].shear_Z, 'force');
+        const endVz = convertResult(pts[pts.length - 1].shear_Z, 'force');
+        return `
+          <tr>
+            <td><strong>${m.memberId}</strong></td>
+            <td>${startVy.toFixed(2)}</td>
+            <td>${endVy.toFixed(2)}</td>
+            <td>${startVz.toFixed(2)}</td>
+            <td>${endVz.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 5. Bending Moments
+    const tbodyMoments = document.querySelector('#table-res-moments tbody');
+    if (tbodyMoments && results.memberForces) {
+      tbodyMoments.innerHTML = results.memberForces.map(m => {
+        const pts = m.points;
+        const startMy = convertResult(pts[0].moment_Y, 'moment');
+        const endMy = convertResult(pts[pts.length - 1].moment_Y, 'moment');
+        const startMz = convertResult(pts[0].moment_Z, 'moment');
+        const endMz = convertResult(pts[pts.length - 1].moment_Z, 'moment');
+        return `
+          <tr>
+            <td><strong>${m.memberId}</strong></td>
+            <td>${startMy.toFixed(2)}</td>
+            <td>${endMy.toFixed(2)}</td>
+            <td>${startMz.toFixed(2)}</td>
+            <td>${endMz.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 6. Torsion
+    const tbodyTorsion = document.querySelector('#table-res-torsion tbody');
+    if (tbodyTorsion && results.memberForces) {
+      tbodyTorsion.innerHTML = results.memberForces.map(m => {
+        const pts = m.points;
+        const start = convertResult(pts[0].torque, 'moment');
+        const end = convertResult(pts[pts.length - 1].torque, 'moment');
+        const max = convertResult(Math.max(...pts.map(pt => Math.abs(pt.torque))), 'moment');
+        return `
+          <tr>
+            <td><strong>${m.memberId}</strong></td>
+            <td>${start.toFixed(2)}</td>
+            <td>${end.toFixed(2)}</td>
+            <td>${max.toFixed(2)}</td>
+          </tr>
+        `;
+      }).join('');
     }
   }
 
@@ -1135,8 +1500,8 @@
     window.FrameModel.addMember('B3', 'N4', 'N3', 'IPE 200', 'Steel – E250');
 
     // Supports
-    window.FrameModel.addSupport('N1', [True, True, True, True, False, False]); // Stabilized
-    window.FrameModel.addSupport('N4', [True, True, True, False, False, False]); // Pinned
+    window.FrameModel.addSupport('N1', [true, true, true, true, false, false]); // Stabilized
+    window.FrameModel.addSupport('N4', [true, true, true, false, false, false]); // Pinned
 
     // Loads
     window.FrameModel.addLoad({
@@ -1158,7 +1523,6 @@
   }
 
   // Helper values for default supports setup
-  const True = true, False = false;
 
   function showToast(message, type = 'success') {
     const toast = document.getElementById('toast-notify');
@@ -1185,7 +1549,10 @@
 
   function openFrameReport() {
     const results = window.FrameModel.results;
-    if (!results) return;
+    if (!results) {
+      showToast("Analysis results are not available. Please analyse the model first.", "error");
+      return;
+    }
 
     const reportWindow = window.open('', '_blank');
     if (!reportWindow) {

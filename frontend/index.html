@@ -1028,10 +1028,12 @@
           <section class="frame-left-panel" style="display: flex; flex-direction: column; gap: 20px; height: 100%;">
             
             <!-- WebGL 3D Viewport (takes majority of height) -->
-            <div class="card cursor-select-node" id="frame-viewport-card" style="position: relative; flex: 1; overflow: hidden; padding: 0; min-height: 380px;">
+            <div class="card cursor-select-node" id="frame-viewport-card" style="position: relative; overflow: hidden; padding: 0; height: 500px; min-height: 450px;">
               <div id="frame-canvas-container" style="width: 100%; height: 100%; background-color: var(--bg-body);"></div>
               <!-- Selection Marquee Div -->
               <div id="frame-selection-marquee" style="position: absolute; border: 1.5px dashed var(--accent-secondary, #f1c40f); background: rgba(241, 196, 15, 0.15); pointer-events: none; display: none; z-index: 20;"></div>
+              <!-- Labels Overlay Canvas -->
+              <canvas id="frame-labels-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;"></canvas>
               
               <!-- XYZ Axes Indicator corner overlay -->
               <div id="axes-indicator-container" style="position: absolute; top: 12px; right: 12px; width: 65px; height: 65px; z-index: 10; pointer-events: none; background: rgba(30, 30, 40, 0.7); border: 1px solid var(--border-color); border-radius: 8px; backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;">
@@ -1067,25 +1069,6 @@
               <!-- Floating Viewport Hover Tooltip -->
               <div id="frame-viewport-tooltip" style="position: absolute; display: none; background: rgba(15, 23, 42, 0.95); color: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.72rem; pointer-events: none; z-index: 100; box-shadow: var(--shadow-lg); font-family: var(--font-sans); line-height: 1.4;"></div>
 
-              <!-- Diagram Selector Overlay -->
-              <div style="position: absolute; top: 12px; left: 12px; background: rgba(30,30,40,0.85); backdrop-filter: blur(4px); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px; z-index: 10;">
-                <label style="font-weight: 600; font-size: 0.75rem; color: #fff;">Display Diagram Layer</label>
-                <select id="diagram-layer-selector" class="form-control" style="font-size: 0.75rem; height: 26px; padding: 2px 6px; background-color: var(--bg-card); color: var(--text-primary); border-color: var(--border-color);">
-                  <option value="none">Undeflected Shape</option>
-                  <option value="deflection">Deflection Shape</option>
-                  <option value="moment_Z">Bending Moment (Mz)</option>
-                  <option value="shear_Y">Shear Force (Vy)</option>
-                  <option value="axial">Axial Force (Fx)</option>
-                </select>
-                <div style="display: flex; gap: 10px; align-items: center; margin-top: 4px;">
-                  <label style="font-size: 0.7rem; color: #ccc; display: flex; align-items: center; gap: 4px;">
-                    <input type="checkbox" id="toggle-layer-loads" checked> Loads
-                  </label>
-                  <label style="font-size: 0.7rem; color: #ccc; display: flex; align-items: center; gap: 4px;">
-                    <input type="checkbox" id="toggle-layer-reactions" checked> Reactions
-                  </label>
-                </div>
-              </div>
 
               <!-- View Controls -->
               <div style="position: absolute; bottom: 12px; right: 12px; display: flex; gap: 6px; z-index: 10;">
@@ -1093,60 +1076,548 @@
                 <button class="btn btn-secondary" id="btn-view-xy" style="font-size: 0.75rem; padding: 4px 8px;">XY Plane</button>
                 <button class="btn btn-secondary" id="btn-view-xz" style="font-size: 0.75rem; padding: 4px 8px;">XZ Plane</button>
               </div>
+
+              <!-- Action buttons: Solve and Report (bottom-left overlay) -->
+              <div style="position: absolute; bottom: 12px; left: 12px; display: flex; gap: 6px; z-index: 10;">
+                <button class="btn btn-secondary btn-analyse-required" id="btn-solve-frame" style="font-size: 0.75rem; padding: 4px 8px; flex-grow: 0 !important; flex: none !important; display: inline-flex; align-items: center; gap: 4px;">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align: middle;"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round"/></svg>
+                  Analyse Model
+                </button>
+                <button class="btn btn-secondary" id="btn-open-frame-report" style="font-size: 0.75rem; padding: 4px 8px; flex-grow: 0 !important; flex: none !important; display: inline-flex; align-items: center; gap: 4px;">
+                  Open Report
+                </button>
+              </div>
             </div>
 
-            <!-- Analysis Outputs Tabs (bottom section) -->
-            <div class="card" style="height: 200px; flex-shrink: 0; display: flex; flex-direction: column;">
-              <div style="display: flex; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px; gap: 15px;">
-                <button class="btn btn-tab active" id="btn-tab-res-displacements" style="background: none; border: none; padding: 0 4px 4px; font-weight: 600; color: var(--text-primary); cursor: pointer;">Nodal Displacements</button>
-                <button class="btn btn-tab" id="btn-tab-res-reactions" style="background: none; border: none; padding: 0 4px 4px; font-weight: 600; color: var(--text-secondary); cursor: pointer;">Support Reactions</button>
-              </div>
-
-              <!-- Displacements table -->
-              <div id="panel-res-displacements" class="res-tab-content" style="flex: 1; overflow-y: auto;">
-                <div class="table-responsive">
-                  <table class="data-table" id="table-res-displacements">
-                    <thead>
-                      <tr>
-                        <th>Node</th>
-                        <th>DX (mm)</th>
-                        <th>DY (mm)</th>
-                        <th>DZ (mm)</th>
-                        <th>RX (rad)</th>
-                        <th>RY (rad)</th>
-                        <th>RZ (rad)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td colspan="7" style="text-align: center; color: var(--text-secondary);">No displacements resolved. Click "Solve Frame Analysis".</td>
-                      </tr>
-                    </tbody>
-                  </table>
+            <!-- Top Window: Display Controls -->
+            <div class="card" id="frame-display-controls-card" style="flex-shrink: 0; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; gap: 20px;">
+                <!-- Model display options -->
+                <div style="flex: 1;">
+                  <h4 style="font-size: 0.78rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 8px; color: var(--text-primary);">Model Display</h4>
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 12px;">
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-loads" checked style="margin: 0; width: 14px; height: 14px;"> Loads
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-supports" checked style="margin: 0; width: 14px; height: 14px;"> Supports
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-nodes" checked style="margin: 0; width: 14px; height: 14px;"> Node Numbers
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-beams" checked style="margin: 0; width: 14px; height: 14px;"> Beam Numbers
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-axes" style="margin: 0; width: 14px; height: 14px;"> Local Axes
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-dimensions" style="margin: 0; width: 14px; height: 14px;"> Dimensions
+                    </label>
+                  </div>
+                </div>
+                <!-- Result display options -->
+                <div style="flex: 1.5; opacity: 0.5; pointer-events: none;" id="group-result-display-controls">
+                  <h4 style="font-size: 0.78rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 8px; color: var(--text-primary);">Result Diagram Layer</h4>
+                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 12px;">
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-reactions" checked disabled style="margin: 0; width: 14px; height: 14px;"> Support Reactions
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-displ-x" disabled style="margin: 0; width: 14px; height: 14px;"> Displacement X
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-displ-y" disabled style="margin: 0; width: 14px; height: 14px;"> Displacement Y
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-displ-z" disabled style="margin: 0; width: 14px; height: 14px;"> Displacement Z
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-axial" disabled style="margin: 0; width: 14px; height: 14px;"> Axial Force
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-shear" disabled style="margin: 0; width: 14px; height: 14px;"> Shear Force
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-torsion" disabled style="margin: 0; width: 14px; height: 14px;"> Torsion
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-moment-x" disabled style="margin: 0; width: 14px; height: 14px;"> Bending Moment X
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-moment-y" disabled style="margin: 0; width: 14px; height: 14px;"> Bending Moment Y
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-moment-z" disabled style="margin: 0; width: 14px; height: 14px;"> Bending Moment Z
+                    </label>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <!-- Reactions table -->
-              <div id="panel-res-reactions" class="res-tab-content" style="display: none; flex: 1; overflow-y: auto;">
-                <div class="table-responsive">
-                  <table class="data-table" id="table-res-reactions">
-                    <thead>
-                      <tr>
-                        <th>Node</th>
-                        <th>FX (kN)</th>
-                        <th>FY (kN)</th>
-                        <th>FZ (kN)</th>
-                        <th>MX (kNm)</th>
-                        <th>MY (kNm)</th>
-                        <th>MZ (kNm)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td colspan="7" style="text-align: center; color: var(--text-secondary);">No support reactions resolved. Click "Solve Frame Analysis".</td>
-                      </tr>
-                    </tbody>
-                  </table>
+            <!-- Bottom Window: Result Tables -->
+            <div class="card" id="frame-results-tables-card" style="height: 250px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; padding: 12px; margin-top: 0;">
+              <!-- Tabs Header -->
+              <div class="frame-tabs" id="frame-results-tabs-header" style="grid-template-columns: repeat(6, 1fr) !important; margin-bottom: 12px !important;">
+                <span class="btn-subtab active disabled" id="btn-tab-res-displacements" style="cursor: pointer; opacity: 0.5; pointer-events: none;">Displacements</span>
+                <span class="btn-subtab disabled" id="btn-tab-res-reactions" style="cursor: pointer; opacity: 0.5; pointer-events: none;">Support Reactions</span>
+                <span class="btn-subtab disabled" id="btn-tab-res-axial" style="cursor: pointer; opacity: 0.5; pointer-events: none;">Axial Forces</span>
+                <span class="btn-subtab disabled" id="btn-tab-res-shear" style="cursor: pointer; opacity: 0.5; pointer-events: none;">Shear Forces</span>
+                <span class="btn-subtab disabled" id="btn-tab-res-moments" style="cursor: pointer; opacity: 0.5; pointer-events: none;">Bending Moments</span>
+                <span class="btn-subtab disabled" id="btn-tab-res-torsion" style="cursor: pointer; opacity: 0.5; pointer-events: none;">Torsion</span>
+              </div>
+
+              <!-- Tab Contents -->
+              <div style="flex: 1; overflow-y: auto; position: relative;">
+                <!-- 1. Displacements table -->
+                <div id="panel-res-displacements" class="res-tab-content" style="display: block;">
+                  <div class="table-responsive">
+                    <table class="data-table" id="table-res-displacements">
+                      <thead>
+                        <tr>
+                          <th>Node</th>
+                          <th>DX</th>
+                          <th>DY</th>
+                          <th>DZ</th>
+                          <th>RX</th>
+                          <th>RY</th>
+                          <th>RZ</th>
+                        </tr>
+                        <tr class="unit-row">
+                          <th></th>
+                          <th>
+                            <select class="table-unit-select res-unit-disp">
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="m">m</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-disp">
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="m">m</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-disp">
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="m">m</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-rot">
+                              <option value="rad">rad</option>
+                              <option value="deg">deg</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-rot">
+                              <option value="rad">rad</option>
+                              <option value="deg">deg</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-rot">
+                              <option value="rad">rad</option>
+                              <option value="deg">deg</option>
+                            </select>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td colspan="7" style="text-align: center; color: var(--text-secondary);">No active analysis results. Click "Analyse Model".</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 2. Support Reactions table -->
+                <div id="panel-res-reactions" class="res-tab-content" style="display: none;">
+                  <div class="table-responsive">
+                    <table class="data-table" id="table-res-reactions">
+                      <thead>
+                        <tr>
+                          <th>Node</th>
+                          <th>FX</th>
+                          <th>FY</th>
+                          <th>FZ</th>
+                          <th>MX</th>
+                          <th>MY</th>
+                          <th>MZ</th>
+                        </tr>
+                        <tr class="unit-row">
+                          <th></th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td colspan="7" style="text-align: center; color: var(--text-secondary);">No active analysis results. Click "Analyse Model".</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 3. Axial Forces table -->
+                <div id="panel-res-axial" class="res-tab-content" style="display: none;">
+                  <div class="table-responsive">
+                    <table class="data-table" id="table-res-axial">
+                      <thead>
+                        <tr>
+                          <th>Member</th>
+                          <th>Start</th>
+                          <th>End</th>
+                          <th>Max Abs</th>
+                        </tr>
+                        <tr class="unit-row">
+                          <th></th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td colspan="4" style="text-align: center; color: var(--text-secondary);">No active analysis results. Click "Analyse Model".</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 4. Shear Forces table -->
+                <div id="panel-res-shear" class="res-tab-content" style="display: none;">
+                  <div class="table-responsive">
+                    <table class="data-table" id="table-res-shear">
+                      <thead>
+                        <tr>
+                          <th>Member</th>
+                          <th>Start Vy</th>
+                          <th>End Vy</th>
+                          <th>Start Vz</th>
+                          <th>End Vz</th>
+                        </tr>
+                        <tr class="unit-row">
+                          <th></th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                          <th>
+                            <select class="table-unit-select res-unit-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td colspan="5" style="text-align: center; color: var(--text-secondary);">No active analysis results. Click "Analyse Model".</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 5. Bending Moments table -->
+                <div id="panel-res-moments" class="res-tab-content" style="display: none;">
+                  <div class="table-responsive">
+                    <table class="data-table" id="table-res-moments">
+                      <thead>
+                        <tr>
+                          <th>Member</th>
+                          <th>Start My</th>
+                          <th>End My</th>
+                          <th>Start Mz</th>
+                          <th>End Mz</th>
+                        </tr>
+                        <tr class="unit-row">
+                          <th></th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td colspan="5" style="text-align: center; color: var(--text-secondary);">No active analysis results. Click "Analyse Model".</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- 6. Torsion table -->
+                <div id="panel-res-torsion" class="res-tab-content" style="display: none;">
+                  <div class="table-responsive">
+                    <table class="data-table" id="table-res-torsion">
+                      <thead>
+                        <tr>
+                          <th>Member</th>
+                          <th>Start</th>
+                          <th>End</th>
+                          <th>Max Abs</th>
+                        </tr>
+                        <tr class="unit-row">
+                          <th></th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                          <th style="white-space: nowrap;">
+                            <select class="table-unit-select res-unit-moment-force">
+                              <option value="kN">kN</option>
+                              <option value="N">N</option>
+                              <option value="MN">MN</option>
+                              <option value="kgf">kgf</option>
+                              <option value="tf">tf</option>
+                              <option value="MT">MT</option>
+                            </select>·<select class="table-unit-select res-unit-moment-len">
+                              <option value="m">m</option>
+                              <option value="mm">mm</option>
+                              <option value="cm">cm</option>
+                              <option value="ft">ft</option>
+                              <option value="in">in</option>
+                            </select>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td colspan="4" style="text-align: center; color: var(--text-secondary);">No active analysis results. Click "Analyse Model".</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1839,16 +2310,7 @@
 
 
 
-            <!-- Action buttons -->
-            <div class="card" style="flex-shrink: 0; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-              <button class="btn btn-primary" id="btn-solve-frame" style="width: 100%; font-size: 0.85rem; padding: 8px 12px;">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="margin-right: 4px; vertical-align: middle;"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round"/></svg>
-                Solve Frame Analysis
-              </button>
-              <button class="btn btn-secondary" id="btn-open-frame-report" style="width: 100%; font-size: 0.85rem; padding: 6px 12px;" disabled>
-                Open Analysis Report
-              </button>
-            </div>
+
             
           </aside>
 
