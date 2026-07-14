@@ -32,6 +32,8 @@
       default: return 1000.0;
     }
   }
+  window.getDistFactor = getDistFactor;
+  window.getForceFactor = getForceFactor;
   
   
   // Selected display units for results (Displacement, Rotation, Force, Moment Force, Moment Length)
@@ -106,6 +108,7 @@
     }
     return val;
   }
+  window.convertResult = convertResult;
 
   function syncResultUnitDropdowns() {
     document.querySelectorAll('.res-unit-disp').forEach(select => {
@@ -641,6 +644,7 @@
     // Display control checkboxes change listeners to trigger re-renders
     const displayCheckboxes = [
       'toggle-show-loads',
+      'toggle-show-load-values',
       'toggle-show-supports',
       'toggle-show-nodes',
       'toggle-show-beams',

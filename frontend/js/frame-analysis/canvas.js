@@ -53,6 +53,8 @@
     
     const showNodes = document.getElementById('toggle-show-nodes')?.checked;
     const showBeams = document.getElementById('toggle-show-beams')?.checked;
+    const showLoads = document.getElementById('toggle-show-loads')?.checked;
+    const showLoadValues = document.getElementById('toggle-show-load-values')?.checked;
     const showAxes = document.getElementById('toggle-show-axes')?.checked;
     const showDimensions = document.getElementById('toggle-show-dimensions')?.checked;
     const showReactions = document.getElementById('toggle-show-reactions')?.checked;
@@ -300,6 +302,107 @@
           ctx.textBaseline = 'middle';
           ctx.fillText(lbl, px, py);
         });
+      });
+    }
+
+    // 6. Load Values
+    if (showLoads && showLoadValues) {
+      const loads = window.FrameModel.loads || [];
+      loads.forEach((l) => {
+        let ptTail = null;
+        let ptBase = null;
+
+        if (l.type === 'NodeLoad' || l.type === 'NodalLoad') {
+          const node = window.FrameModel.nodes[l.nodeId];
+          if (!node) return;
+          const magnitude = parseFloat(l.force);
+          if (magnitude === 0) return;
+
+          const dirMap = {
+            'FX': new THREE.Vector3(1, 0, 0),
+            'FY': new THREE.Vector3(0, 1, 0),
+            'FZ': new THREE.Vector3(0, 0, 1),
+            'MX': new THREE.Vector3(1, 0, 0),
+            'MY': new THREE.Vector3(0, 1, 0),
+            'MZ': new THREE.Vector3(0, 0, 1)
+          };
+          const dir = dirMap[l.direction].clone();
+          const arrowDir = dir.clone().multiplyScalar(magnitude > 0 ? 1 : -1);
+          const startPos = new THREE.Vector3(node.x, node.y, node.z).sub(arrowDir.clone().multiplyScalar(1.2));
+          
+          ptTail = project(startPos.x, startPos.y, startPos.z);
+          ptBase = project(node.x, node.y, node.z);
+        } else if (l.type === 'MemberDistributedLoad' || l.type === 'MemberPointLoad') {
+          const member = window.FrameModel.members[l.memberId];
+          if (!member) return;
+          const nStart = window.FrameModel.nodes[member.startNode];
+          const nEnd = window.FrameModel.nodes[member.endNode];
+          if (!nStart || !nEnd) return;
+
+          const mid = new THREE.Vector3(
+            (nStart.x + nEnd.x) / 2,
+            (nStart.y + nEnd.y) / 2,
+            (nStart.z + nEnd.z) / 2
+          );
+
+          let arrowDir = new THREE.Vector3(0, -1, 0);
+          if (l.direction === 'Fx') {
+            arrowDir = new THREE.Vector3(nEnd.x - nStart.x, nEnd.y - nStart.y, nEnd.z - nStart.z).normalize();
+          }
+          const startPos = mid.clone().sub(arrowDir.clone().multiplyScalar(0.8));
+          
+          ptTail = project(startPos.x, startPos.y, startPos.z);
+          ptBase = project(mid.x, mid.y, mid.z);
+        }
+
+        if (ptTail && ptBase && ptTail.z <= 1) {
+          const dx = ptTail.x - ptBase.x;
+          const dy = ptTail.y - ptBase.y;
+          const len = Math.hypot(dx, dy);
+
+          let px = ptTail.x;
+          let py = ptTail.y;
+          if (len > 1e-3) {
+            px += (dx / len) * 12;
+            py += (dy / len) * 12;
+          } else {
+            py -= 12;
+          }
+
+          const fUnit = window.ResultUnits.force || 'kN';
+          const dUnit = (fUnit === 'lbf' || fUnit === 'kip') ? 'ft' : 'm';
+          let displayValStr = '';
+          const rawVal = parseFloat(l.force);
+
+          if (l.type === 'NodeLoad' || l.type === 'NodalLoad') {
+            const isMoment = l.direction.startsWith('M');
+            if (isMoment) {
+              const factor = window.getForceFactor(fUnit) * window.getDistFactor(dUnit);
+              displayValStr = `${(rawVal / factor).toFixed(1)} ${fUnit}·${dUnit}`;
+            } else {
+              const factor = window.getForceFactor(fUnit);
+              displayValStr = `${(rawVal / factor).toFixed(1)} ${fUnit}`;
+            }
+          } else if (l.type === 'MemberPointLoad') {
+            const factor = window.getForceFactor(fUnit);
+            displayValStr = `${(rawVal / factor).toFixed(1)} ${fUnit}`;
+          } else if (l.type === 'MemberDistributedLoad') {
+            const factor = window.getForceFactor(fUnit) / window.getDistFactor(dUnit);
+            displayValStr = `${(rawVal / factor).toFixed(1)} ${fUnit}/${dUnit}`;
+          }
+
+          ctx.font = '9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          // Outline shadow for readability against Light and Dark themes
+          ctx.strokeStyle = 'rgba(15, 23, 42, 0.9)';
+          ctx.lineWidth = 2.5;
+          ctx.strokeText(displayValStr, px, py);
+
+          ctx.fillStyle = '#10b981'; // Vibrant emerald green for load values
+          ctx.fillText(displayValStr, px, py);
+        }
       });
     }
   }
