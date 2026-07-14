@@ -1437,37 +1437,24 @@
     }
   }
 
-  function ensureActiveResultsTabCategory(type) {
-    const activeTab = document.querySelector('#frame-results-tabs-header .btn-subtab.active');
-    if (!activeTab) return;
-    
-    const activeId = activeTab.id;
-    if (type === 'node') {
-      if (activeId !== 'btn-tab-res-displacements' && activeId !== 'btn-tab-res-reactions') {
-        const target = document.getElementById('btn-tab-res-displacements');
-        if (target && !target.classList.contains('disabled')) target.click();
-      }
-    } else if (type === 'support') {
-      if (activeId !== 'btn-tab-res-reactions') {
-        const target = document.getElementById('btn-tab-res-reactions');
-        if (target && !target.classList.contains('disabled')) target.click();
-      }
-    } else if (type === 'member') {
-      const memberTabs = ['btn-tab-res-axial', 'btn-tab-res-shear', 'btn-tab-res-moments', 'btn-tab-res-torsion'];
-      if (!memberTabs.includes(activeId)) {
-        const target = document.getElementById('btn-tab-res-axial');
-        if (target && !target.classList.contains('disabled')) target.click();
+  function scrollSelectedResultsIntoView(targetId = null) {
+    const activePanel = document.querySelector('.res-tab-content[style*="display: block"]');
+    if (!activePanel) return;
+
+    if (targetId) {
+      const rows = activePanel.querySelectorAll('tbody tr');
+      for (const row of rows) {
+        const firstCell = row.querySelector('td');
+        if (firstCell && firstCell.innerText.trim() === targetId) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          return;
+        }
       }
     }
-  }
 
-  function scrollSelectedResultsIntoView() {
-    const activePanel = document.querySelector('.res-tab-content[style*="display: block"]');
-    if (activePanel) {
-      const selectedRow = activePanel.querySelector('tbody tr.selected-row');
-      if (selectedRow) {
-        selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+    const selectedRow = activePanel.querySelector('tbody tr.selected-row');
+    if (selectedRow) {
+      selectedRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
 
@@ -1800,13 +1787,10 @@
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // Auto-switch Results tab category to node results if valid results exist
+    // Sync results tables if valid results exist
     if (window.FrameModel.results) {
-      ensureActiveResultsTabCategory('node');
-
       // Sync Displacements Results Table
       const resDispRows = document.querySelectorAll('#table-res-displacements tbody tr');
-      let targetResDispRow = null;
       resDispRows.forEach(row => {
         const firstCell = row.querySelector('td');
         if (firstCell) {
@@ -1814,21 +1798,14 @@
           const isSelected = window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId);
           if (isSelected) {
             row.classList.add('selected-row');
-            if (rowNodeId === nodeId) {
-              targetResDispRow = row;
-            }
           } else {
             row.classList.remove('selected-row');
           }
         }
       });
-      if (targetResDispRow) {
-        targetResDispRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
 
       // Sync Support Reactions Results Table
       const resReactRows = document.querySelectorAll('#table-res-reactions tbody tr');
-      let targetResReactRow = null;
       resReactRows.forEach(row => {
         const firstCell = row.querySelector('td');
         if (firstCell) {
@@ -1836,17 +1813,14 @@
           const isSelected = window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId);
           if (isSelected) {
             row.classList.add('selected-row');
-            if (rowNodeId === nodeId) {
-              targetResReactRow = row;
-            }
           } else {
             row.classList.remove('selected-row');
           }
         }
       });
-      if (targetResReactRow) {
-        targetResReactRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+
+      // Scroll the active Results tab table to the selected node
+      scrollSelectedResultsIntoView(nodeId);
     }
 
     const startSel = document.getElementById('member-input-start');
@@ -2025,10 +1999,8 @@
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     
-    // Auto-switch Results tab category to member results if valid results exist
+    // Sync results tables if valid results exist
     if (window.FrameModel.results) {
-      ensureActiveResultsTabCategory('member');
-
       const beamResultTables = [
         '#table-res-axial',
         '#table-res-shear',
@@ -2037,7 +2009,6 @@
       ];
       beamResultTables.forEach(tableSelector => {
         const resBeamRows = document.querySelectorAll(`${tableSelector} tbody tr`);
-        let targetResRow = null;
         resBeamRows.forEach(row => {
           const firstCell = row.querySelector('td');
           if (firstCell) {
@@ -2045,18 +2016,15 @@
             const isSelected = window.FrameCanvas.selectedMemberIds && window.FrameCanvas.selectedMemberIds.has(rowMemberId);
             if (isSelected) {
               row.classList.add('selected-row');
-              if (rowMemberId === memberId) {
-                targetResRow = row;
-              }
             } else {
               row.classList.remove('selected-row');
             }
           }
         });
-        if (targetResRow) {
-          targetResRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
       });
+
+      // Scroll the active Results tab table to the selected member
+      scrollSelectedResultsIntoView(memberId);
     }
 
     updateMatSecTabUI();
@@ -2086,13 +2054,10 @@
       targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // Auto-switch Results tab category to support results if valid results exist
+    // Sync results tables if valid results exist
     if (window.FrameModel.results) {
-      ensureActiveResultsTabCategory('support');
-
       // Sync Support Reactions Results Table
       const resReactRows = document.querySelectorAll('#table-res-reactions tbody tr');
-      let targetResReactRow = null;
       resReactRows.forEach(row => {
         const firstCell = row.querySelector('td');
         if (firstCell) {
@@ -2100,17 +2065,14 @@
           const isSelected = window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId);
           if (isSelected) {
             row.classList.add('selected-row');
-            if (rowNodeId === nodeId) {
-              targetResReactRow = row;
-            }
           } else {
             row.classList.remove('selected-row');
           }
         }
       });
-      if (targetResReactRow) {
-        targetResReactRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+
+      // Scroll the active Results tab table to the selected support node
+      scrollSelectedResultsIntoView(nodeId);
     }
   };
 
