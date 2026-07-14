@@ -65,26 +65,19 @@
         
         ctx.font = 'bold 9px sans-serif';
         const label = `${n.id}`;
-        const textWidth = ctx.measureText(label).width;
-        
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.strokeStyle = 'rgba(241, 196, 15, 0.7)';
-        ctx.lineWidth = 1;
         
         const px = pt.x;
-        const py = pt.y - 14;
-        const w = textWidth + 8;
-        const h = 14;
+        const py = pt.y - 12;
         
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(px - w/2, py - h/2, w, h, 4);
-        else ctx.rect(px - w/2, py - h/2, w, h);
-        ctx.fill();
-        ctx.stroke();
-        
-        ctx.fillStyle = '#f1c40f';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        
+        // Subtle outline for universal light/dark theme contrast
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.lineWidth = 2.5;
+        ctx.strokeText(label, px, py);
+        
+        ctx.fillStyle = '#f59e0b';
         ctx.fillText(label, px, py);
       });
     }
@@ -103,28 +96,37 @@
         const pt = project(midX, midY, midZ);
         if (pt.z > 1) return;
         
+        // Compute 2D perpendicular offset vector from beam line
+        const ptStart = project(nStart.x, nStart.y, nStart.z);
+        const ptEnd = project(nEnd.x, nEnd.y, nEnd.z);
+        const dx = ptEnd.x - ptStart.x;
+        const dy = ptEnd.y - ptStart.y;
+        const len = Math.hypot(dx, dy);
+        
+        let offsetX = 0;
+        let offsetY = -10;
+        if (len > 1e-3) {
+          const nx = -dy / len;
+          const ny = dx / len;
+          offsetX = nx * 10;
+          offsetY = ny * 10;
+        }
+        
+        const px = pt.x + offsetX;
+        const py = pt.y + offsetY;
+        
         ctx.font = 'bold 9px sans-serif';
         const label = `${m.id}`;
-        const textWidth = ctx.measureText(label).width;
         
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.strokeStyle = 'rgba(70, 130, 180, 0.8)';
-        ctx.lineWidth = 1.2;
-        
-        const px = pt.x;
-        const py = pt.y;
-        const w = textWidth + 10;
-        const h = 14;
-        
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(px - w/2, py - h/2, w, h, 4);
-        else ctx.rect(px - w/2, py - h/2, w, h);
-        ctx.fill();
-        ctx.stroke();
-        
-        ctx.fillStyle = '#38bdf8';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        
+        // Subtle outline for universal light/dark theme contrast
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.lineWidth = 2.5;
+        ctx.strokeText(label, px, py);
+        
+        ctx.fillStyle = '#0ea5e9';
         ctx.fillText(label, px, py);
       });
     }
