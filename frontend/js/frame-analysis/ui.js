@@ -1293,6 +1293,12 @@
     }
   }
 
+  window.FrameModel.updateLoadNo = function(index, val) {
+    if (window.FrameModel.loads[index]) {
+      window.FrameModel.loads[index].loadNo = val;
+    }
+  };
+
   function updateTablesDisplay() {
     // 1. Nodes Table
     const tbodyNodes = document.querySelector('#table-nodes tbody');
@@ -1573,49 +1579,91 @@
     }
 
     // 4. Loads Table
-    const tbodyLoads = document.querySelector('#table-loads tbody');
+    const tbodyLoads = document.querySelector('#table-primary-loads tbody');
     const loads = window.FrameModel.loads;
     if (loads.length === 0) {
       tbodyLoads.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">No loads placed.</td></tr>`;
     } else {
       tbodyLoads.innerHTML = loads.map((l, index) => {
-        const target = (l.type === 'NodalLoad' || l.type === 'SupportSettlement') ? `Node ${l.nodeId}` : `Member ${l.memberId}`;
-        
         const fUnit = activeUnits.loadVal;
         const dUnit = (fUnit === 'lbf' || fUnit === 'kip') ? 'ft' : 'm';
+        const forceFactor = getForceFactor(fUnit);
+        const distFactor = getDistFactor(dUnit);
         
-        let displayValStr = '';
+        let displayApp = '';
+        let displayDetails = '';
+        
         if (l.type === 'NodalLoad') {
+          displayApp = 'Nodal Load';
           const isMoment = l.direction.startsWith('M');
-          if (isMoment) {
-            const factor = getForceFactor(fUnit) * getDistFactor(dUnit);
-            const valConv = parseFloat(l.force) / factor;
-            displayValStr = `${valConv.toFixed(1)} ${fUnit}·${dUnit}`;
-          } else {
-            const factor = getForceFactor(fUnit);
-            const valConv = parseFloat(l.force) / factor;
-            displayValStr = `${valConv.toFixed(1)} ${fUnit}`;
-          }
+          const valConv = parseFloat(l.force) / (isMoment ? (forceFactor * distFactor) : forceFactor);
+          const unitStr = isMoment ? `${fUnit}·${dUnit}` : fUnit;
+          displayDetails = `Node ${l.nodeId} | ${l.direction} = ${valConv.toFixed(1)} ${unitStr}`;
         } else if (l.type === 'MemberPointLoad') {
-          const factor = getForceFactor(fUnit);
-          const valConv = parseFloat(l.force) / factor;
-          displayValStr = `${valConv.toFixed(1)} ${fUnit}`;
+          const isMoment = l.direction.startsWith('M') || l.direction.startsWith('m');
+          displayApp = isMoment ? 'Member Moment' : 'Concentrated Load';
+          const valConv = parseFloat(l.force) / (isMoment ? (forceFactor * distFactor) : forceFactor);
+          const unitStr = isMoment ? `${fUnit}·${dUnit}` : fUnit;
+          displayDetails = `Beam ${l.memberId} | ${l.direction} = ${valConv.toFixed(1)} ${unitStr} @ ${l.offset.toFixed(2)} ${dUnit}`;
         } else if (l.type === 'MemberDistributedLoad') {
-          const factor = getForceFactor(fUnit) / getDistFactor(dUnit);
-          const valConv = parseFloat(l.force) / factor;
-          displayValStr = `${valConv.toFixed(1)} ${fUnit}/${dUnit}`;
+          const isTrapezoidal = l.w1 !== l.w2;
+          const isPartial = (l.x1 !== null && l.x1 !== undefined && l.x1 !== 0) || (l.x2 !== null && l.x2 !== undefined);
+          
+          displayApp = isTrapezoidal ? 'Trapezoidal Load' : (isPartial ? 'Partial UDL' : 'UDL');
+          
+          const w1Conv = parseFloat(l.w1) / (forceFactor / distFactor);
+          const w2Conv = parseFloat(l.w2) / (forceFactor / distFactor);
+          
+          if (isTrapezoidal) {
+            displayDetails = `Beam ${l.memberId} | w1 = ${w1Conv.toFixed(1)}, w2 = ${w2Conv.toFixed(1)} ${fUnit}/${dUnit}`;
+          } else {
+            displayDetails = `Beam ${l.memberId} | ${w1Conv.toFixed(1)} ${fUnit}/${dUnit}`;
+          }
+          
+          if (isPartial) {
+            const x1 = l.x1 !== null && l.x1 !== undefined ? l.x1 : 0;
+            const x2 = l.x2 !== null && l.x2 !== undefined ? l.x2 : 0;
+            displayDetails += ` | d1 = ${x1.toFixed(2)} ${dUnit} | d2 = ${x2.toFixed(2)} ${dUnit}`;
+          } else {
+            displayDetails += ` | Full`;
+          }
         } else if (l.type === 'TemperatureLoad') {
-          displayValStr = `${l.dT} °C`;
+          displayApp = 'Temperature Load';
+          displayDetails = `Beam ${l.memberId} | dT = ${l.dT} °C`;
         } else if (l.type === 'SupportSettlement') {
-          displayValStr = `dx:${l.dx}, dy:${l.dy}, dz:${l.dz} mm`;
+          displayApp = 'Support Settlement';
+          const nonZeroes = [];
+          if (l.dx !== 0) nonZeroes.push(`dx = ${l.dx} mm`);
+          if (l.dy !== 0) nonZeroes.push(`dy = ${l.dy} mm`);
+          if (l.dz !== 0) nonZeroes.push(`dz = ${l.dz} mm`);
+          if (l.rx !== 0) nonZeroes.push(`rx = ${l.rx} rad`);
+          if (l.ry !== 0) nonZeroes.push(`ry = ${l.ry} rad`);
+          if (l.rz !== 0) nonZeroes.push(`rz = ${l.rz} rad`);
+          displayDetails = `Node ${l.nodeId} | ${nonZeroes.length > 0 ? nonZeroes.join(', ') : 'No settlement'}`;
         }
+        
+        function getShortLoadType(typeStr) {
+          if (!typeStr) return 'DL';
+          if (typeStr.includes('(DL)')) return 'DL';
+          if (typeStr.includes('(LL)')) return 'LL';
+          if (typeStr.includes('(WL)')) return 'WL';
+          if (typeStr.includes('(EQ)')) return 'EQ';
+          if (typeStr.includes('Temperature')) return 'TEMP';
+          if (typeStr.includes('Crane')) return 'CRANE';
+          if (typeStr.includes('Equipment')) return 'EQUIP';
+          return 'USER';
+        }
+        
+        const shortType = getShortLoadType(l.loadType);
 
         return `
           <tr>
-            <td>${target}</td>
-            <td>${l.type.replace('Member', '').replace('Load', '')}</td>
-            <td>${l.direction}</td>
-            <td>${displayValStr}</td>
+            <td style="text-align: center; vertical-align: middle; padding: 2px;">
+              <input type="text" class="load-no-input" value="${l.loadNo || (index + 1)}" style="width: 50px; font-size: 0.72rem; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); border-radius: 4px; padding: 2px; text-align: center;" onclick="event.stopPropagation();" onchange="window.FrameModel.updateLoadNo(${index}, this.value)">
+            </td>
+            <td>${shortType}</td>
+            <td>${displayApp}</td>
+            <td>${displayDetails}</td>
             <td>
               <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteLoad(${index}); window.initFrameAnalysisView();">Delete</button>
             </td>
@@ -2452,7 +2500,7 @@
   };
 
   window.selectLoadFromCanvas = function(loadIndex) {
-    const tableRows = document.querySelectorAll('#table-loads tbody tr');
+    const tableRows = document.querySelectorAll('#table-primary-loads tbody tr');
     let targetRow = null;
 
     tableRows.forEach((row, idx) => {

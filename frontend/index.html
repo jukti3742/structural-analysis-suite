@@ -1978,34 +1978,62 @@
                       <thead>
                         <tr><th>Node</th><th>Restraints</th><th></th></tr>
                       </thead>
-                      <tbody></tbody>
-                    </table>
-                  </div>
-
-                  <!-- Loads table -->
+                            <!-- Loads table -->
                   <div id="list-container-loads" class="list-tab-content" style="display: none;">
-                    <table class="data-table" id="table-loads" style="font-size: 0.75rem;">
-                      <thead>
-                        <tr>
-                          <th>Target</th>
-                          <th>Type</th>
-                          <th>Dir</th>
-                          <th>
-                            <span style="display: flex; align-items: center; gap: 4px;">
-                              Value
-                              <select class="table-unit-select" id="load-unit-val">
-                                <option value="kN">kN</option>
-                                <option value="N">N</option>
-                                <option value="kip">kip</option>
-                                <option value="lb">lb</option>
-                              </select>
-                            </span>
-                          </th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody></tbody>
-                    </table>
+                    <!-- Primary Loads Window -->
+                    <div class="primary-loads-window" style="margin-bottom: 16px;">
+                      <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; color: var(--text-primary);">
+                        Primary Loads
+                      </div>
+                      <div class="table-responsive">
+                        <table class="data-table" id="table-primary-loads" style="font-size: 0.75rem; width: 100%;">
+                          <thead>
+                            <tr>
+                              <th style="width: 70px; text-align: center;">Load No.</th>
+                              <th style="width: 80px;">Load Type</th>
+                              <th style="width: 130px;">Load Application</th>
+                              <th>
+                                <span style="display: flex; align-items: center; justify-content: space-between;">
+                                  <span>Load Details</span>
+                                  <select class="table-unit-select" id="load-unit-val" style="font-size: 11px; padding: 2px 4px; height: 20px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary);">
+                                    <option value="kN">kN</option>
+                                    <option value="N">N</option>
+                                    <option value="kip">kip</option>
+                                    <option value="lb">lb</option>
+                                  </select>
+                                </span>
+                              </th>
+                              <th style="width: 50px;"></th>
+                            </tr>
+                          </thead>
+                          <tbody></tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- Combined Loads Window -->
+                    <div class="combined-loads-window">
+                      <div style="font-size: 0.8rem; font-weight: bold; margin-bottom: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; color: var(--text-primary);">
+                        Combined Loads
+                      </div>
+                      <div class="table-responsive">
+                        <table class="data-table" id="table-combined-loads" style="font-size: 0.75rem; width: 100%;">
+                          <thead>
+                            <tr>
+                              <th style="width: 80px; text-align: center;">Comb No.</th>
+                              <th style="width: 120px;">Name</th>
+                              <th style="width: 80px;">Type</th>
+                              <th>Equation / Factors</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td colspan="4" style="text-align: center; color: var(--text-secondary); padding: 8px;">No load combinations generated yet.</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   </div>
 
                 </div>
