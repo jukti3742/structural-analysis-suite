@@ -138,6 +138,7 @@
           // Repopulate results tables with converted values
           if (window.FrameModel && window.FrameModel.results) {
             populateResultsTables(window.FrameModel.results);
+            updateTablesDisplay();
           }
         });
       });
