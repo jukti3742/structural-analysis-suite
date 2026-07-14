@@ -1299,6 +1299,77 @@
     }
   };
 
+  window.editingLoadIndex = null;
+
+  window.startLoadEdit = function(index) {
+    window.editingLoadIndex = index;
+    window.initFrameAnalysisView();
+  };
+
+  window.cancelLoadEdit = function() {
+    window.editingLoadIndex = null;
+    window.initFrameAnalysisView();
+  };
+
+  window.saveLoadEdit = function(index) {
+    const l = window.FrameModel.loads[index];
+    if (!l) return;
+
+    const fUnit = activeUnits.loadVal;
+    const dUnit = (fUnit === 'lbf' || fUnit === 'kip') ? 'ft' : 'm';
+    const forceFactor = getForceFactor(fUnit);
+    const distFactor = getDistFactor(dUnit);
+
+    try {
+      if (l.type === 'NodalLoad') {
+        const isMoment = l.direction.startsWith('M');
+        const factor = isMoment ? (forceFactor * distFactor) : forceFactor;
+        const inputVal = parseFloat(document.getElementById(`edit-nodal-force-${index}`).value || 0);
+        l.force = inputVal * factor;
+      } else if (l.type === 'MemberPointLoad') {
+        const isMoment = l.direction.startsWith('M') || l.direction.startsWith('m');
+        const factor = isMoment ? (forceFactor * distFactor) : forceFactor;
+        const inputVal = parseFloat(document.getElementById(`edit-memberpoint-force-${index}`).value || 0);
+        const offsetVal = parseFloat(document.getElementById(`edit-memberpoint-offset-${index}`).value || 0);
+        l.force = inputVal * factor;
+        l.offset = offsetVal;
+      } else if (l.type === 'MemberDistributedLoad') {
+        const isTrapezoidal = l.w1 !== l.w2;
+        const isPartial = (l.x1 !== null && l.x1 !== undefined && l.x1 !== 0) || (l.x2 !== null && l.x2 !== undefined);
+        
+        const factor = forceFactor / distFactor;
+        const w1Val = parseFloat(document.getElementById(`edit-memberdist-w1-${index}`).value || 0);
+        l.w1 = w1Val * factor;
+        if (isTrapezoidal) {
+          const w2Val = parseFloat(document.getElementById(`edit-memberdist-w2-${index}`).value || 0);
+          l.w2 = w2Val * factor;
+        } else {
+          l.w2 = w1Val * factor;
+        }
+        
+        if (isPartial) {
+          const x1Val = parseFloat(document.getElementById(`edit-memberdist-x1-${index}`).value || 0);
+          const x2Val = parseFloat(document.getElementById(`edit-memberdist-x2-${index}`).value || 0);
+          l.x1 = x1Val;
+          l.x2 = x2Val;
+        }
+      } else if (l.type === 'TemperatureLoad') {
+        const dTVal = parseFloat(document.getElementById(`edit-temperature-dt-${index}`).value || 0);
+        l.dT = dTVal;
+      } else if (l.type === 'SupportSettlement') {
+        if (document.getElementById(`edit-settlement-dx-${index}`)) l.dx = parseFloat(document.getElementById(`edit-settlement-dx-${index}`).value || 0);
+        if (document.getElementById(`edit-settlement-dy-${index}`)) l.dy = parseFloat(document.getElementById(`edit-settlement-dy-${index}`).value || 0);
+        if (document.getElementById(`edit-settlement-dz-${index}`)) l.dz = parseFloat(document.getElementById(`edit-settlement-dz-${index}`).value || 0);
+      }
+    } catch (err) {
+      console.error("Error saving edited load values: ", err);
+    }
+    
+    window.FrameModel.results = null;
+    window.editingLoadIndex = null;
+    window.initFrameAnalysisView();
+  };
+
   function updateTablesDisplay() {
     // 1. Nodes Table
     const tbodyNodes = document.querySelector('#table-nodes tbody');
@@ -1582,7 +1653,7 @@
     const tbodyLoads = document.querySelector('#table-primary-loads tbody');
     const loads = window.FrameModel.loads;
     if (loads.length === 0) {
-      tbodyLoads.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">No loads placed.</td></tr>`;
+      tbodyLoads.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-secondary);">No loads placed.</td></tr>`;
     } else {
       tbodyLoads.innerHTML = loads.map((l, index) => {
         const fUnit = activeUnits.loadVal;
@@ -1592,54 +1663,88 @@
         
         let displayApp = '';
         let displayDetails = '';
+        const isEditing = (index === window.editingLoadIndex);
         
         if (l.type === 'NodalLoad') {
-          displayApp = 'Nodal Load';
           const isMoment = l.direction.startsWith('M');
           const valConv = parseFloat(l.force) / (isMoment ? (forceFactor * distFactor) : forceFactor);
-          const unitStr = isMoment ? `${fUnit}·${dUnit}` : fUnit;
-          displayDetails = `Node ${l.nodeId} | ${l.direction} = ${valConv.toFixed(1)} ${unitStr}`;
+          displayApp = `Nodal Load (${l.nodeId})`;
+          
+          if (isEditing) {
+            displayDetails = `${l.direction} = <input type="number" step="any" id="edit-nodal-force-${index}" value="${valConv.toFixed(1)}" style="width: 60px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">`;
+          } else {
+            displayDetails = `${l.direction} = ${valConv.toFixed(1)}`;
+          }
         } else if (l.type === 'MemberPointLoad') {
           const isMoment = l.direction.startsWith('M') || l.direction.startsWith('m');
-          displayApp = isMoment ? 'Member Moment' : 'Concentrated Load';
           const valConv = parseFloat(l.force) / (isMoment ? (forceFactor * distFactor) : forceFactor);
-          const unitStr = isMoment ? `${fUnit}·${dUnit}` : fUnit;
-          displayDetails = `Beam ${l.memberId} | ${l.direction} = ${valConv.toFixed(1)} ${unitStr} @ ${l.offset.toFixed(2)} ${dUnit}`;
+          displayApp = `${isMoment ? 'Moment' : 'Concentrated'} (${l.memberId})`;
+          
+          if (isEditing) {
+            displayDetails = `${l.direction} = <input type="number" step="any" id="edit-memberpoint-force-${index}" value="${valConv.toFixed(1)}" style="width: 55px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();"> @ <input type="number" step="any" id="edit-memberpoint-offset-${index}" value="${l.offset.toFixed(2)}" style="width: 45px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">`;
+          } else {
+            displayDetails = `${l.direction} = ${valConv.toFixed(1)} @ ${l.offset.toFixed(2)}`;
+          }
         } else if (l.type === 'MemberDistributedLoad') {
           const isTrapezoidal = l.w1 !== l.w2;
           const isPartial = (l.x1 !== null && l.x1 !== undefined && l.x1 !== 0) || (l.x2 !== null && l.x2 !== undefined);
-          
-          displayApp = isTrapezoidal ? 'Trapezoidal Load' : (isPartial ? 'Partial UDL' : 'UDL');
+          const appName = isTrapezoidal ? 'Trapezoidal' : (isPartial ? 'Partial UDL' : 'UDL');
+          displayApp = `${appName} (${l.memberId})`;
           
           const w1Conv = parseFloat(l.w1) / (forceFactor / distFactor);
           const w2Conv = parseFloat(l.w2) / (forceFactor / distFactor);
           
-          if (isTrapezoidal) {
-            displayDetails = `Beam ${l.memberId} | w1 = ${w1Conv.toFixed(1)}, w2 = ${w2Conv.toFixed(1)} ${fUnit}/${dUnit}`;
+          if (isEditing) {
+            if (isTrapezoidal) {
+              displayDetails = `w1 = <input type="number" step="any" id="edit-memberdist-w1-${index}" value="${w1Conv.toFixed(1)}" style="width: 50px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">, w2 = <input type="number" step="any" id="edit-memberdist-w2-${index}" value="${w2Conv.toFixed(1)}" style="width: 50px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">`;
+            } else {
+              displayDetails = `w = <input type="number" step="any" id="edit-memberdist-w1-${index}" value="${w1Conv.toFixed(1)}" style="width: 50px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">`;
+            }
+            
+            if (isPartial) {
+              const x1 = l.x1 !== null && l.x1 !== undefined ? l.x1 : 0;
+              const x2 = l.x2 !== null && l.x2 !== undefined ? l.x2 : 0;
+              displayDetails += `, d1 = <input type="number" step="any" id="edit-memberdist-x1-${index}" value="${x1.toFixed(2)}" style="width: 45px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">, d2 = <input type="number" step="any" id="edit-memberdist-x2-${index}" value="${x2.toFixed(2)}" style="width: 45px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">`;
+            } else {
+              displayDetails += `, full`;
+            }
           } else {
-            displayDetails = `Beam ${l.memberId} | ${w1Conv.toFixed(1)} ${fUnit}/${dUnit}`;
-          }
-          
-          if (isPartial) {
-            const x1 = l.x1 !== null && l.x1 !== undefined ? l.x1 : 0;
-            const x2 = l.x2 !== null && l.x2 !== undefined ? l.x2 : 0;
-            displayDetails += ` | d1 = ${x1.toFixed(2)} ${dUnit} | d2 = ${x2.toFixed(2)} ${dUnit}`;
-          } else {
-            displayDetails += ` | Full`;
+            if (isTrapezoidal) {
+              displayDetails = `w1 = ${w1Conv.toFixed(1)}, w2 = ${w2Conv.toFixed(1)}`;
+            } else {
+              displayDetails = `${w1Conv.toFixed(1)}`;
+            }
+            
+            if (isPartial) {
+              const x1 = l.x1 !== null && l.x1 !== undefined ? l.x1 : 0;
+              const x2 = l.x2 !== null && l.x2 !== undefined ? l.x2 : 0;
+              displayDetails += `, d1 = ${x1.toFixed(2)}, d2 = ${x2.toFixed(2)}`;
+            } else {
+              displayDetails += `, full`;
+            }
           }
         } else if (l.type === 'TemperatureLoad') {
-          displayApp = 'Temperature Load';
-          displayDetails = `Beam ${l.memberId} | dT = ${l.dT} °C`;
+          displayApp = `Temp (${l.memberId})`;
+          if (isEditing) {
+            displayDetails = `dT = <input type="number" step="any" id="edit-temperature-dt-${index}" value="${l.dT}" style="width: 55px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">`;
+          } else {
+            displayDetails = `dT = ${l.dT}`;
+          }
         } else if (l.type === 'SupportSettlement') {
-          displayApp = 'Support Settlement';
-          const nonZeroes = [];
-          if (l.dx !== 0) nonZeroes.push(`dx = ${l.dx} mm`);
-          if (l.dy !== 0) nonZeroes.push(`dy = ${l.dy} mm`);
-          if (l.dz !== 0) nonZeroes.push(`dz = ${l.dz} mm`);
-          if (l.rx !== 0) nonZeroes.push(`rx = ${l.rx} rad`);
-          if (l.ry !== 0) nonZeroes.push(`ry = ${l.ry} rad`);
-          if (l.rz !== 0) nonZeroes.push(`rz = ${l.rz} rad`);
-          displayDetails = `Node ${l.nodeId} | ${nonZeroes.length > 0 ? nonZeroes.join(', ') : 'No settlement'}`;
+          displayApp = `Settlement (${l.nodeId})`;
+          if (isEditing) {
+            const inputs = [];
+            if (l.dx !== 0) inputs.push(`dx = <input type="number" step="any" id="edit-settlement-dx-${index}" value="${l.dx}" style="width: 45px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">`);
+            if (l.dy !== 0) inputs.push(`dy = <input type="number" step="any" id="edit-settlement-dy-${index}" value="${l.dy}" style="width: 45px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">`);
+            if (l.dz !== 0) inputs.push(`dz = <input type="number" step="any" id="edit-settlement-dz-${index}" value="${l.dz}" style="width: 45px; font-size: 0.72rem; padding: 2px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-card); color: var(--text-primary);" onclick="event.stopPropagation();">`);
+            displayDetails = inputs.length > 0 ? inputs.join(', ') : '0';
+          } else {
+            const nonZeroes = [];
+            if (l.dx !== 0) nonZeroes.push(`dx = ${l.dx}`);
+            if (l.dy !== 0) nonZeroes.push(`dy = ${l.dy}`);
+            if (l.dz !== 0) nonZeroes.push(`dz = ${l.dz}`);
+            displayDetails = nonZeroes.length > 0 ? nonZeroes.join(', ') : '0';
+          }
         }
         
         function getShortLoadType(typeStr) {
@@ -1655,17 +1760,44 @@
         }
         
         const shortType = getShortLoadType(l.loadType);
+        const combRule = l.combRule || 'Direct';
+
+        let actionButtons = '';
+        if (isEditing) {
+          actionButtons = `
+            <button class="btn btn-primary save-btn" style="padding: 4px 6px; font-size: 0.72rem; margin-right: 4px; display: inline-flex; align-items: center; gap: 2px;" onclick="event.stopPropagation(); window.saveLoadEdit(${index});">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Save
+            </button>
+            <button class="btn btn-secondary cancel-btn" style="padding: 4px 6px; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 2px;" onclick="event.stopPropagation(); window.cancelLoadEdit();">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Cancel
+            </button>
+          `;
+        } else {
+          actionButtons = `
+            <button class="btn btn-secondary edit-btn" style="padding: 4px 6px; font-size: 0.72rem; margin-right: 4px; display: inline-flex; align-items: center; gap: 2px;" onclick="event.stopPropagation(); window.startLoadEdit(${index});">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Edit
+            </button>
+            <button class="btn btn-secondary delete-btn" style="padding: 4px 6px; font-size: 0.72rem; color: var(--danger-color); display: inline-flex; align-items: center; gap: 2px;" onclick="event.stopPropagation(); window.FrameModel.deleteLoad(${index}); window.initFrameAnalysisView();">
+              <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Delete
+            </button>
+          `;
+        }
 
         return `
           <tr>
             <td style="text-align: center; vertical-align: middle; padding: 2px;">
               <input type="text" class="load-no-input" value="${l.loadNo || (index + 1)}" style="width: 50px; font-size: 0.72rem; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); border-radius: 4px; padding: 2px; text-align: center;" onclick="event.stopPropagation();" onchange="window.FrameModel.updateLoadNo(${index}, this.value)">
             </td>
-            <td>${shortType}</td>
-            <td>${displayApp}</td>
-            <td>${displayDetails}</td>
-            <td>
-              <button class="btn btn-secondary delete-btn" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.FrameModel.deleteLoad(${index}); window.initFrameAnalysisView();">Delete</button>
+            <td style="vertical-align: middle;">${displayDetails}</td>
+            <td style="vertical-align: middle;">${shortType}</td>
+            <td style="vertical-align: middle;">${displayApp}</td>
+            <td style="vertical-align: middle;">${combRule}</td>
+            <td style="vertical-align: middle; text-align: center;">
+              ${actionButtons}
             </td>
           </tr>
         `;
@@ -1680,7 +1812,7 @@
         }
 
         row.addEventListener('click', (e) => {
-          if (e.target.classList.contains('delete-btn')) return;
+          if (e.target.closest('button') || e.target.closest('input')) return;
           if (window.FrameCanvas) {
             const isMulti = e.ctrlKey || e.shiftKey;
             

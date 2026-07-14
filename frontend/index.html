@@ -1839,7 +1839,7 @@
                     <!-- Lower Portion - Load Parameters (Dynamic) -->
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                       <div class="input-group">
-                        <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary); font-weight: 600;">Load Application Type</label>
+                        <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary); font-weight: 600;">Load Def.</label>
                         <select id="load-app-type" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
                           <option value="Nodal Load">Nodal Load</option>
                           <option value="Concentrated Member Load">Concentrated Member Load</option>
@@ -1994,12 +1994,10 @@
                           <thead>
                             <tr>
                               <th style="width: 70px; text-align: center;">Load No.</th>
-                              <th style="width: 80px;">Load Type</th>
-                              <th style="width: 130px;">Load Application</th>
                               <th>
                                 <span style="display: flex; align-items: center; justify-content: space-between;">
                                   <span>Load Details</span>
-                                  <select class="table-unit-select" id="load-unit-val" style="font-size: 11px; padding: 2px 4px; height: 20px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary);">
+                                  <select class="table-unit-select" id="load-unit-val" style="font-size: 11px; padding: 2px 4px; height: 20px; border-radius: 4px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-primary); margin-left: 8px;">
                                     <option value="kN">kN</option>
                                     <option value="N">N</option>
                                     <option value="kip">kip</option>
@@ -2007,7 +2005,10 @@
                                   </select>
                                 </span>
                               </th>
-                              <th style="width: 50px;"></th>
+                              <th style="width: 80px;">Load Type</th>
+                              <th style="width: 140px;">Load Definition</th>
+                              <th style="width: 130px;">Combination Rule</th>
+                              <th style="width: 140px; text-align: center;">Modify</th>
                             </tr>
                           </thead>
                           <tbody></tbody>
