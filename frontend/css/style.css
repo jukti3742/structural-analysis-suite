@@ -1698,7 +1698,8 @@ input:checked + .switch-slider:before {
 }
 
 /* Row selection highlight (CAD coordination sync) */
-#frame-list-tables-container table.data-table tr.selected-row td {
+#frame-list-tables-container table.data-table tr.selected-row td,
+#frame-results-tables-card table.data-table tr.selected-row td {
   background-color: rgba(241, 196, 15, 0.18) !important; /* Gold highlight tint */
   border-top: 1.5px solid var(--warning) !important;
   border-bottom: 1.5px solid var(--warning) !important;

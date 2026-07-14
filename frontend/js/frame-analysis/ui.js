@@ -1373,7 +1373,8 @@
         const firstCell = row.querySelector('td');
         if (firstCell) {
           const rowNodeId = firstCell.innerText.trim();
-          const isSelected = window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId);
+          const isSelected = (window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId)) ||
+                             (window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId));
           if (isSelected) {
             row.classList.add('selected-row');
           } else {
@@ -1393,7 +1394,8 @@
         const firstCell = row.querySelector('td');
         if (firstCell) {
           const rowNodeId = firstCell.innerText.trim();
-          const isSelected = window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId);
+          const isSelected = (window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId)) ||
+                             (window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId));
           if (isSelected) {
             row.classList.add('selected-row');
           } else {
@@ -1796,7 +1798,8 @@
         const firstCell = row.querySelector('td');
         if (firstCell) {
           const rowNodeId = firstCell.innerText.trim();
-          const isSelected = window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId);
+          const isSelected = (window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId)) ||
+                             (window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId));
           if (isSelected) {
             row.classList.add('selected-row');
           } else {
@@ -1811,7 +1814,8 @@
         const firstCell = row.querySelector('td');
         if (firstCell) {
           const rowNodeId = firstCell.innerText.trim();
-          const isSelected = window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId);
+          const isSelected = (window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId)) ||
+                             (window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId));
           if (isSelected) {
             row.classList.add('selected-row');
           } else {
@@ -2063,7 +2067,8 @@
         const firstCell = row.querySelector('td');
         if (firstCell) {
           const rowNodeId = firstCell.innerText.trim();
-          const isSelected = window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId);
+          const isSelected = (window.FrameCanvas.selectedNodeIds && window.FrameCanvas.selectedNodeIds.has(rowNodeId)) ||
+                             (window.FrameCanvas.selectedSupportIds && window.FrameCanvas.selectedSupportIds.has(rowNodeId));
           if (isSelected) {
             row.classList.add('selected-row');
           } else {
