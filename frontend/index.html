@@ -1093,7 +1093,7 @@
             <div class="card" id="frame-display-controls-card" style="flex-shrink: 0; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
               <div style="display: flex; gap: 20px;">
                 <!-- Model display options -->
-                <div style="flex: 1;">
+                <div style="flex: 1.2;">
                   <h4 style="font-size: 0.78rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 8px; color: var(--text-primary);">Model Display</h4>
                   <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 12px;">
                     <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
@@ -1115,7 +1115,22 @@
                       <input type="checkbox" id="toggle-show-dimensions" style="margin: 0; width: 14px; height: 14px;"> Dimensions
                     </label>
                     <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
-                      <input type="checkbox" id="toggle-show-load-values" style="margin: 0; width: 14px; height: 14px;"> Load Values
+                      <input type="checkbox" id="toggle-show-member-sections" style="margin: 0; width: 14px; height: 14px;"> Member Section
+                    </label>
+                  </div>
+                </div>
+                <!-- Force Values Display options -->
+                <div style="flex: 0.8;">
+                  <h4 style="font-size: 0.78rem; font-weight: 700; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; margin-bottom: 8px; color: var(--text-primary);">Force Values</h4>
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-load-concentrated" style="margin: 0; width: 14px; height: 14px;"> Concentrated Load
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-load-udl" style="margin: 0; width: 14px; height: 14px;"> UDL
+                    </label>
+                    <label style="font-size: 0.72rem; display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-weight: 500;">
+                      <input type="checkbox" id="toggle-show-load-moment" style="margin: 0; width: 14px; height: 14px;"> Moment
                     </label>
                   </div>
                 </div>

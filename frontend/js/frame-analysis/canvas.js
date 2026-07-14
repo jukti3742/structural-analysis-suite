@@ -54,7 +54,10 @@
     const showNodes = document.getElementById('toggle-show-nodes')?.checked;
     const showBeams = document.getElementById('toggle-show-beams')?.checked;
     const showLoads = document.getElementById('toggle-show-loads')?.checked;
-    const showLoadValues = document.getElementById('toggle-show-load-values')?.checked;
+    const showMemberSections = document.getElementById('toggle-show-member-sections')?.checked;
+    const showLoadConcentrated = document.getElementById('toggle-show-load-concentrated')?.checked;
+    const showLoadUdl = document.getElementById('toggle-show-load-udl')?.checked;
+    const showLoadMoment = document.getElementById('toggle-show-load-moment')?.checked;
     const showAxes = document.getElementById('toggle-show-axes')?.checked;
     const showDimensions = document.getElementById('toggle-show-dimensions')?.checked;
     const showReactions = document.getElementById('toggle-show-reactions')?.checked;
@@ -129,6 +132,55 @@
         ctx.strokeText(label, px, py);
         
         ctx.fillStyle = '#0ea5e9';
+        ctx.fillText(label, px, py);
+      });
+    }
+    
+    // 2b. Member Sections
+    if (showMemberSections) {
+      members.forEach(m => {
+        const nStart = window.FrameModel.nodes[m.startNode];
+        const nEnd = window.FrameModel.nodes[m.endNode];
+        if (!nStart || !nEnd) return;
+        
+        const midX = (nStart.x + nEnd.x) / 2;
+        const midY = (nStart.y + nEnd.y) / 2;
+        const midZ = (nStart.z + nEnd.z) / 2;
+        
+        const pt = project(midX, midY, midZ);
+        if (pt.z > 1) return;
+        
+        // Compute 2D perpendicular offset vector from beam line (opposite side of Beam ID)
+        const ptStart = project(nStart.x, nStart.y, nStart.z);
+        const ptEnd = project(nEnd.x, nEnd.y, nEnd.z);
+        const dx = ptEnd.x - ptStart.x;
+        const dy = ptEnd.y - ptStart.y;
+        const len = Math.hypot(dx, dy);
+        
+        let offsetX = 0;
+        let offsetY = 10;
+        if (len > 1e-3) {
+          const nx = -dy / len;
+          const ny = dx / len;
+          offsetX = -nx * 10;
+          offsetY = -ny * 10;
+        }
+        
+        const px = pt.x + offsetX;
+        const py = pt.y + offsetY;
+        
+        ctx.font = 'bold 9px sans-serif';
+        const label = m.sectionName || 'Default';
+        
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Subtle outline for universal light/dark theme contrast
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.lineWidth = 2.5;
+        ctx.strokeText(label, px, py);
+        
+        ctx.fillStyle = '#cbd5e1';
         ctx.fillText(label, px, py);
       });
     }
@@ -306,9 +358,24 @@
     }
 
     // 6. Load Values
-    if (showLoads && showLoadValues) {
+    if (showLoads && (showLoadConcentrated || showLoadUdl || showLoadMoment)) {
       const loads = window.FrameModel.loads || [];
       loads.forEach((l) => {
+        let shouldShow = false;
+        if (l.type === 'NodeLoad' || l.type === 'NodalLoad') {
+          const isMoment = l.direction.startsWith('M');
+          if (isMoment) {
+            shouldShow = showLoadMoment;
+          } else {
+            shouldShow = showLoadConcentrated;
+          }
+        } else if (l.type === 'MemberPointLoad') {
+          shouldShow = showLoadConcentrated;
+        } else if (l.type === 'MemberDistributedLoad') {
+          shouldShow = showLoadUdl;
+        }
+        if (!shouldShow) return;
+
         let ptTail = null;
         let ptBase = null;
 

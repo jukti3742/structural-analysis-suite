@@ -644,7 +644,10 @@
     // Display control checkboxes change listeners to trigger re-renders
     const displayCheckboxes = [
       'toggle-show-loads',
-      'toggle-show-load-values',
+      'toggle-show-member-sections',
+      'toggle-show-load-concentrated',
+      'toggle-show-load-udl',
+      'toggle-show-load-moment',
       'toggle-show-supports',
       'toggle-show-nodes',
       'toggle-show-beams',
