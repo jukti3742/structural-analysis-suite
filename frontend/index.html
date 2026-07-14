@@ -1807,62 +1807,59 @@
                 <!-- Tab content: Loads Input -->
                 <div class="frame-tab-content" id="panel-tab-loads" style="display: none;">
                   <p class="section-desc" style="font-size: 0.72rem; margin-bottom: 8px; font-weight: 600;">Apply External Loads</p>
-                  <div style="display: flex; gap: 8px; margin-bottom: 10px; align-items: flex-end;">
-                    <div class="input-group" style="flex: 1;">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Load Target</label>
-                      <select id="load-input-target" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
-                        <option value="node">Nodal Joint Load</option>
-                        <option value="member">Member Load</option>
-                      </select>
+                  
+                  <!-- Unified Load Input Panel -->
+                  <div style="border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 12px; background: rgba(0,0,0,0.02);">
+                    
+                    <!-- Upper Portion - Load Definition (Fixed) -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary); font-weight: 600;">Load Type</label>
+                        <select id="load-category-type" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                          <option value="Dead Load (DL)">Dead Load (DL)</option>
+                          <option value="Live Load (LL)">Live Load (LL)</option>
+                          <option value="Wind Load (WL)">Wind Load (WL)</option>
+                          <option value="Seismic Load (EQ)">Seismic Load (EQ)</option>
+                          <option value="Temperature Load">Temperature Load</option>
+                          <option value="Crane Load">Crane Load</option>
+                          <option value="Equipment Load">Equipment Load</option>
+                          <option value="User Defined">User Defined</option>
+                        </select>
+                      </div>
+                      <div class="input-group" style="flex: 1;">
+                        <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary); font-weight: 600;">Combination Rule</label>
+                        <select id="load-category-rule" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                          <option value="Direct">Direct</option>
+                          <option value="Separate">Separate</option>
+                          <option value="Cross">Cross</option>
+                        </select>
+                      </div>
                     </div>
-                    <div class="input-group" id="load-group-node" style="flex: 1.5;">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Target Node</label>
-                      <select id="load-input-node" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
-                        <option value="">Select Node</option>
-                      </select>
-                    </div>
-                    <div class="input-group" id="load-group-member" style="flex: 1.5; display: none;">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Target Beam</label>
-                      <select id="load-input-member" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
-                    </div>
-                  </div>
-                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                    <div class="input-group" style="flex: 1;">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Load Type</label>
-                      <select id="load-input-type" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
-                        <option value="Point">Point Force</option>
-                        <option value="UDL">UDL</option>
-                        <option value="Trapezoidal">Trapezoidal</option>
-                      </select>
-                    </div>
-                    <div class="input-group" style="flex: 1;">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Direction</label>
-                      <select id="load-input-direction" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
-                        <option value="FX">Global X-Axis</option>
-                        <option value="FY">Global Y-Axis (Gravity)</option>
-                        <option value="FZ">Global Z-Axis</option>
-                      </select>
-                    </div>
-                    <div class="input-group" id="load-group-magnitude" style="flex: 1.2;">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;" id="lbl-load-mag">Force (kN)</label>
-                      <input type="number" id="load-input-mag" value="-10.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
-                    </div>
-                  </div>
-                  <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                    <div class="input-group" id="load-group-magnitude2" style="flex: 1; display: none;">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">End w2 (kN/m)</label>
-                      <input type="number" id="load-input-mag2" value="-10.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
-                    </div>
-                    <div class="input-group" id="load-group-offset" style="flex: 1; display: none;">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Offset x1 (m)</label>
-                      <input type="number" id="load-input-offset" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
-                    </div>
-                    <div class="input-group" id="load-group-offset2" style="flex: 1; display: none;">
-                      <label style="font-size: 0.72rem; margin-bottom: 2px; display: block;">Offset x2 (m)</label>
-                      <input type="number" id="load-input-offset2" value="2.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+
+                    <!-- Lower Portion - Load Parameters (Dynamic) -->
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                      <div class="input-group">
+                        <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary); font-weight: 600;">Load Application Type</label>
+                        <select id="load-app-type" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+                          <option value="Nodal Load">Nodal Load</option>
+                          <option value="Concentrated Member Load">Concentrated Member Load</option>
+                          <option value="UDL">UDL</option>
+                          <option value="Partial UDL">Partial UDL</option>
+                          <option value="Trapezoidal Load">Trapezoidal Load</option>
+                          <option value="Member Moment">Member Moment</option>
+                          <option value="Temperature Load Type">Temperature Load</option>
+                          <option value="Support Settlement">Support Settlement</option>
+                        </select>
+                      </div>
+
+                      <!-- Dynamic Form Container -->
+                      <div id="load-dynamic-form" style="margin-top: 8px;">
+                        <!-- Populated dynamically by renderLoadDynamicForm() in ui.js -->
+                      </div>
                     </div>
                   </div>
-                  <button class="btn btn-primary" id="btn-add-load" style="width: 100%; font-size: 0.85rem; padding: 6px 12px;">Apply Load</button>
+
+                  <button class="btn btn-primary" id="btn-add-frame-load" style="width: 100%; font-size: 0.85rem; padding: 6px 12px;">Add Load</button>
                 </div>
               </div>
               

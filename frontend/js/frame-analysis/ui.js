@@ -314,41 +314,12 @@
       }
     });
 
-    // Load placement target toggling
-    document.getElementById('load-input-target').addEventListener('change', (e) => {
-      const isNode = e.target.value === 'node';
-      document.getElementById('load-group-node').style.display = isNode ? 'block' : 'none';
-      document.getElementById('load-group-member').style.display = isNode ? 'none' : 'block';
-      
-      const dirSel = document.getElementById('load-input-direction');
-      const typeSel = document.getElementById('load-input-type');
-      
-      if (isNode) {
-        // Nodal loads can only be Concentrated point forces/moments
-        typeSel.value = 'Point';
-        typeSel.setAttribute('disabled', 'true');
-        dirSel.innerHTML = `
-          <option value="FY">Global FY (Vertical)</option>
-          <option value="FX">Global FX (Horizontal)</option>
-          <option value="FZ">Global FZ (Lateral)</option>
-          <option value="MZ">Global MZ (Moment)</option>
-        `;
-        document.getElementById('load-group-offset').style.display = 'none';
-        document.getElementById('load-group-offset2').style.display = 'none';
-        document.getElementById('load-group-magnitude2').style.display = 'none';
-      } else {
-        typeSel.removeAttribute('disabled');
-        dirSel.innerHTML = `
-          <option value="Fy">Local Fy (Member Y)</option>
-          <option value="Fx">Local Fx (Member X)</option>
-          <option value="Fz">Local Fz (Member Z)</option>
-          <option value="Mz">Local Mz (Moment)</option>
-        `;
-        toggleMemberLoadFields();
-      }
-    });
-
-    document.getElementById('load-input-type').addEventListener('change', toggleMemberLoadFields);
+    // Dynamic Load Form Toggling
+    const loadAppTypeEl = document.getElementById('load-app-type');
+    if (loadAppTypeEl) {
+      loadAppTypeEl.addEventListener('change', renderLoadDynamicForm);
+      renderLoadDynamicForm();
+    }
 
 
 
@@ -552,60 +523,198 @@
     });
 
     // Add Load
-    document.getElementById('btn-add-load').addEventListener('click', () => {
-      const isNode = document.getElementById('load-input-target').value === 'node';
-      const dir = document.getElementById('load-input-direction').value;
-      const type = document.getElementById('load-input-type').value;
+    document.getElementById('btn-add-frame-load').addEventListener('click', () => {
+      const loadCategoryType = document.getElementById('load-category-type').value;
+      const loadCategoryRule = document.getElementById('load-category-rule').value;
+      const appType = document.getElementById('load-app-type').value;
 
-      if (isNode) {
+      if (appType === 'Nodal Load') {
         const nodeId = document.getElementById('load-input-node').value;
-        const force = parseFloat(document.getElementById('load-input-mag').value) * 1000.0; // convert kN to N
-        if (!nodeId) return;
+        if (!nodeId) {
+          showToast('Please select a target node.');
+          return;
+        }
+
+        const components = ['FX', 'FY', 'FZ', 'MX', 'MY', 'MZ'];
+        let addedAny = false;
+        components.forEach(comp => {
+          const inputEl = document.getElementById(`load-input-node-${comp.toLowerCase()}`);
+          if (inputEl) {
+            const val = parseFloat(inputEl.value || 0.0);
+            if (val !== 0.0) {
+              window.FrameModel.addLoad({
+                type: 'NodalLoad',
+                nodeId,
+                direction: comp,
+                force: val * 1000.0, // convert kN to N
+                loadType: loadCategoryType,
+                combRule: loadCategoryRule
+              });
+              addedAny = true;
+            }
+          }
+        });
+        if (!addedAny) {
+          showToast('Please specify at least one non-zero force/moment component.');
+          return;
+        }
+      } else if (appType === 'Concentrated Member Load') {
+        const memberId = document.getElementById('load-input-member').value;
+        if (!memberId) {
+          showToast('Please select a target member.');
+          return;
+        }
+        const axis = document.getElementById('load-input-dir-axis').value;
+        const system = document.getElementById('load-input-dir-system').value;
+        const direction = 'F' + (system === 'Global' ? axis.toUpperCase() : axis.toLowerCase());
+        const intensity = parseFloat(document.getElementById('load-input-intensity').value || 0.0);
+        const offset = parseFloat(document.getElementById('load-input-offset-x1').value || 0.0);
 
         window.FrameModel.addLoad({
-          type: 'NodalLoad',
-          nodeId,
-          direction: dir,
-          force
+          type: 'MemberPointLoad',
+          memberId,
+          direction,
+          force: intensity * 1000.0,
+          offset,
+          loadType: loadCategoryType,
+          combRule: loadCategoryRule
         });
-      } else {
+      } else if (appType === 'UDL') {
         const memberId = document.getElementById('load-input-member').value;
-        const force = parseFloat(document.getElementById('load-input-mag').value) * 1000.0; // convert kN/m to N/m
-        if (!memberId) return;
-
-        if (type === 'Point') {
-          const offset = parseFloat(document.getElementById('load-input-offset').value);
-          window.FrameModel.addLoad({
-            type: 'MemberPointLoad',
-            memberId,
-            direction: dir,
-            force,
-            offset
-          });
-        } else if (type === 'UDL') {
-          window.FrameModel.addLoad({
-            type: 'MemberDistributedLoad',
-            memberId,
-            direction: dir,
-            w1: force,
-            w2: force,
-            x1: null,
-            x2: null
-          });
-        } else if (type === 'Trapezoidal') {
-          const force2 = parseFloat(document.getElementById('load-input-mag2').value) * 1000.0;
-          const x1 = parseFloat(document.getElementById('load-input-offset').value);
-          const x2 = parseFloat(document.getElementById('load-input-offset2').value);
-          window.FrameModel.addLoad({
-            type: 'MemberDistributedLoad',
-            memberId,
-            direction: dir,
-            w1: force,
-            w2: force2,
-            x1,
-            x2
-          });
+        if (!memberId) {
+          showToast('Please select a target member.');
+          return;
         }
+        const axis = document.getElementById('load-input-dir-axis').value;
+        const system = document.getElementById('load-input-dir-system').value;
+        const direction = 'F' + (system === 'Global' ? axis.toUpperCase() : axis.toLowerCase());
+        const intensity = parseFloat(document.getElementById('load-input-intensity').value || 0.0);
+
+        window.FrameModel.addLoad({
+          type: 'MemberDistributedLoad',
+          memberId,
+          direction,
+          w1: intensity * 1000.0,
+          w2: intensity * 1000.0,
+          x1: null,
+          x2: null,
+          loadType: loadCategoryType,
+          combRule: loadCategoryRule
+        });
+      } else if (appType === 'Partial UDL') {
+        const memberId = document.getElementById('load-input-member').value;
+        if (!memberId) {
+          showToast('Please select a target member.');
+          return;
+        }
+        const axis = document.getElementById('load-input-dir-axis').value;
+        const system = document.getElementById('load-input-dir-system').value;
+        const direction = 'F' + (system === 'Global' ? axis.toUpperCase() : axis.toLowerCase());
+        const intensity = parseFloat(document.getElementById('load-input-intensity').value || 0.0);
+        const x1 = parseFloat(document.getElementById('load-input-offset-x1').value || 0.0);
+        const x2 = parseFloat(document.getElementById('load-input-offset-x2').value || 0.0);
+
+        window.FrameModel.addLoad({
+          type: 'MemberDistributedLoad',
+          memberId,
+          direction,
+          w1: intensity * 1000.0,
+          w2: intensity * 1000.0,
+          x1,
+          x2,
+          loadType: loadCategoryType,
+          combRule: loadCategoryRule
+        });
+      } else if (appType === 'Trapezoidal Load') {
+        const memberId = document.getElementById('load-input-member').value;
+        if (!memberId) {
+          showToast('Please select a target member.');
+          return;
+        }
+        const axis = document.getElementById('load-input-dir-axis').value;
+        const system = document.getElementById('load-input-dir-system').value;
+        const direction = 'F' + (system === 'Global' ? axis.toUpperCase() : axis.toLowerCase());
+        const w1 = parseFloat(document.getElementById('load-input-w1').value || 0.0);
+        const w2 = parseFloat(document.getElementById('load-input-w2').value || 0.0);
+        const x1 = parseFloat(document.getElementById('load-input-offset-x1').value || 0.0);
+        const x2 = parseFloat(document.getElementById('load-input-offset-x2').value || 0.0);
+
+        window.FrameModel.addLoad({
+          type: 'MemberDistributedLoad',
+          memberId,
+          direction,
+          w1: w1 * 1000.0,
+          w2: w2 * 1000.0,
+          x1,
+          x2,
+          loadType: loadCategoryType,
+          combRule: loadCategoryRule
+        });
+      } else if (appType === 'Member Moment') {
+        const memberId = document.getElementById('load-input-member').value;
+        if (!memberId) {
+          showToast('Please select a target member.');
+          return;
+        }
+        const axis = document.getElementById('load-input-dir-axis').value;
+        const system = document.getElementById('load-input-dir-system').value;
+        const direction = 'M' + (system === 'Global' ? axis.toUpperCase() : axis.toLowerCase());
+        const intensity = parseFloat(document.getElementById('load-input-intensity').value || 0.0);
+        const offset = parseFloat(document.getElementById('load-input-offset-x1').value || 0.0);
+
+        window.FrameModel.addLoad({
+          type: 'MemberPointLoad',
+          memberId,
+          direction,
+          force: intensity * 1000.0,
+          offset,
+          loadType: loadCategoryType,
+          combRule: loadCategoryRule
+        });
+      } else if (appType === 'Temperature Load Type') {
+        const memberId = document.getElementById('load-input-member').value;
+        if (!memberId) {
+          showToast('Please select a target member.');
+          return;
+        }
+        const dT = parseFloat(document.getElementById('load-input-temp-dt').value || 0.0);
+
+        window.FrameModel.addLoad({
+          type: 'TemperatureLoad',
+          memberId,
+          direction: 'Temp',
+          dT,
+          force: 0,
+          loadType: loadCategoryType,
+          combRule: loadCategoryRule
+        });
+      } else if (appType === 'Support Settlement') {
+        const nodeId = document.getElementById('load-input-node').value;
+        if (!nodeId) {
+          showToast('Please select a target node.');
+          return;
+        }
+        const dx = parseFloat(document.getElementById('load-input-settle-dx').value || 0.0);
+        const dy = parseFloat(document.getElementById('load-input-settle-dy').value || 0.0);
+        const dz = parseFloat(document.getElementById('load-input-settle-dz').value || 0.0);
+        const rx = parseFloat(document.getElementById('load-input-settle-rx').value || 0.0);
+        const ry = parseFloat(document.getElementById('load-input-settle-ry').value || 0.0);
+        const rz = parseFloat(document.getElementById('load-input-settle-rz').value || 0.0);
+
+        window.FrameModel.addLoad({
+          type: 'SupportSettlement',
+          nodeId,
+          direction: 'Settlement',
+          dx,
+          dy,
+          dz,
+          rx,
+          ry,
+          rz,
+          force: 0,
+          loadType: loadCategoryType,
+          combRule: loadCategoryRule
+        });
       }
 
       showToast('Load added successfully.');
@@ -807,32 +916,279 @@
     bindOperationsEvents();
   }
 
-  function toggleMemberLoadFields() {
-    const type = document.getElementById('load-input-type').value;
-    
-    const offsetGroup = document.getElementById('load-group-offset');
-    const offset2Group = document.getElementById('load-group-offset2');
-    const mag2Group = document.getElementById('load-group-magnitude2');
-    const lblMag = document.getElementById('lbl-load-mag');
+  function renderLoadDynamicForm() {
+    const appType = document.getElementById('load-app-type').value;
+    const formContainer = document.getElementById('load-dynamic-form');
+    if (!formContainer) return;
 
-    if (type === 'Point') {
-      lblMag.textContent = 'Force Magnitude (kN)';
-      offsetGroup.style.display = 'block';
-      document.querySelector('#load-group-offset label').textContent = 'Location (x) (m)';
-      offset2Group.style.display = 'none';
-      mag2Group.style.display = 'none';
-    } else if (type === 'UDL') {
-      lblMag.textContent = 'Distributed Load (w) (kN/m)';
-      offsetGroup.style.display = 'none';
-      offset2Group.style.display = 'none';
-      mag2Group.style.display = 'none';
-    } else if (type === 'Trapezoidal') {
-      lblMag.textContent = 'Start Mag (w1) (kN/m)';
-      offsetGroup.style.display = 'block';
-      document.querySelector('#load-group-offset label').textContent = 'Start Offset (x1) (m)';
-      offset2Group.style.display = 'block';
-      mag2Group.style.display = 'block';
+    let html = '';
+    if (appType === 'Nodal Load') {
+      html = `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Target Node</label>
+            <select id="load-input-node" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 8px; margin-bottom: 4px;">
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Fx (kN)</label>
+            <input type="number" id="load-input-node-fx" value="0.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Fy (kN)</label>
+            <input type="number" id="load-input-node-fy" value="-10.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Fz (kN)</label>
+            <input type="number" id="load-input-node-fz" value="0.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Mx (kN·m)</label>
+            <input type="number" id="load-input-node-mx" value="0.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">My (kN·m)</label>
+            <input type="number" id="load-input-node-my" value="0.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Mz (kN·m)</label>
+            <input type="number" id="load-input-node-mz" value="0.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+        </div>
+      `;
+    } else if (appType === 'Concentrated Member Load') {
+      html = `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div class="input-group" style="flex: 1.2;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Target Beam</label>
+            <select id="load-input-member" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Direction</label>
+            <select id="load-input-dir-axis" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Y">Y-Axis</option>
+              <option value="X">X-Axis</option>
+              <option value="Z">Z-Axis</option>
+            </select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">System</label>
+            <select id="load-input-dir-system" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Local">Local</option>
+              <option value="Global">Global</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Load Intensity (kN)</label>
+            <input type="number" id="load-input-intensity" value="-10.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Offset x1 (m)</label>
+            <input type="number" id="load-input-offset-x1" value="1.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+        </div>
+      `;
+    } else if (appType === 'UDL') {
+      html = `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div class="input-group" style="flex: 1.2;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Target Beam</label>
+            <select id="load-input-member" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Direction</label>
+            <select id="load-input-dir-axis" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Y">Y-Axis</option>
+              <option value="X">X-Axis</option>
+              <option value="Z">Z-Axis</option>
+            </select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">System</label>
+            <select id="load-input-dir-system" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Local">Local</option>
+              <option value="Global">Global</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Load Intensity (kN/m)</label>
+            <input type="number" id="load-input-intensity" value="-5.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+        </div>
+      `;
+    } else if (appType === 'Partial UDL') {
+      html = `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div class="input-group" style="flex: 1.2;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Target Beam</label>
+            <select id="load-input-member" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Direction</label>
+            <select id="load-input-dir-axis" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Y">Y-Axis</option>
+              <option value="X">X-Axis</option>
+              <option value="Z">Z-Axis</option>
+            </select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">System</label>
+            <select id="load-input-dir-system" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Local">Local</option>
+              <option value="Global">Global</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; gap: 6px; margin-bottom: 4px;">
+          <div class="input-group" style="flex: 1.2;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Intensity (kN/m)</label>
+            <input type="number" id="load-input-intensity" value="-5.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Start x1 (m)</label>
+            <input type="number" id="load-input-offset-x1" value="0.5" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">End x2 (m)</label>
+            <input type="number" id="load-input-offset-x2" value="2.5" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+        </div>
+      `;
+    } else if (appType === 'Trapezoidal Load') {
+      html = `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div class="input-group" style="flex: 1.2;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Target Beam</label>
+            <select id="load-input-member" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Direction</label>
+            <select id="load-input-dir-axis" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Y">Y-Axis</option>
+              <option value="X">X-Axis</option>
+              <option value="Z">Z-Axis</option>
+            </select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">System</label>
+            <select id="load-input-dir-system" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Local">Local</option>
+              <option value="Global">Global</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 8px; margin-bottom: 4px;">
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Start w1 (kN/m)</label>
+            <input type="number" id="load-input-w1" value="-5.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">End w2 (kN/m)</label>
+            <input type="number" id="load-input-w2" value="-10.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Start x1 (m)</label>
+            <input type="number" id="load-input-offset-x1" value="0.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">End x2 (m)</label>
+            <input type="number" id="load-input-offset-x2" value="3.0" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+        </div>
+      `;
+    } else if (appType === 'Member Moment') {
+      html = `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div class="input-group" style="flex: 1.2;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Target Beam</label>
+            <select id="load-input-member" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Axis</label>
+            <select id="load-input-dir-axis" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Z">Z-Axis (Mz)</option>
+              <option value="X">X-Axis (Mx)</option>
+              <option value="Y">Y-Axis (My)</option>
+            </select>
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">System</label>
+            <select id="load-input-dir-system" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+              <option value="Local">Local</option>
+              <option value="Global">Global</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Moment Mag (kN·m)</label>
+            <input type="number" id="load-input-intensity" value="-5.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Location x1 (m)</label>
+            <input type="number" id="load-input-offset-x1" value="1.5" step="0.5" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+        </div>
+      `;
+    } else if (appType === 'Temperature Load Type') {
+      html = `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div class="input-group" style="flex: 1.2;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Target Beam</label>
+            <select id="load-input-member" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 4px;">
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Temp Change dT (°C)</label>
+            <input type="number" id="load-input-temp-dt" value="30.0" step="5.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+        </div>
+      `;
+    } else if (appType === 'Support Settlement') {
+      html = `
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <div class="input-group" style="flex: 1;">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">Target Node</label>
+            <select id="load-input-node" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);"></select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 8px; margin-bottom: 4px;">
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">dx (mm)</label>
+            <input type="number" id="load-input-settle-dx" value="0.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">dy (mm)</label>
+            <input type="number" id="load-input-settle-dy" value="-5.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">dz (mm)</label>
+            <input type="number" id="load-input-settle-dz" value="0.0" step="1.0" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">rx (rad)</label>
+            <input type="number" id="load-input-settle-rx" value="0.0" step="0.01" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">ry (rad)</label>
+            <input type="number" id="load-input-settle-ry" value="0.0" step="0.01" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+          <div class="input-group">
+            <label style="font-size: 0.72rem; margin-bottom: 2px; display: block; color: var(--text-secondary);">rz (rad)</label>
+            <input type="number" id="load-input-settle-rz" value="0.0" step="0.01" class="form-control" style="font-size: 0.75rem; height: 28px; padding: 2px 6px;">
+          </div>
+        </div>
+      `;
     }
+
+    formContainer.innerHTML = html;
+    refreshAllDropdowns();
   }
 
   function refreshAllDropdowns() {
@@ -865,12 +1221,16 @@
     }
 
     const nodeOptions = nodes.map(n => `<option value="${n.id}">${n.id}</option>`).join('');
-    document.getElementById('support-input-node').innerHTML = nodeOptions;
-    document.getElementById('load-input-node').innerHTML = nodeOptions;
+    const supportNodeEl = document.getElementById('support-input-node');
+    if (supportNodeEl) supportNodeEl.innerHTML = nodeOptions;
+
+    const loadNodeEl = document.getElementById('load-input-node');
+    if (loadNodeEl) loadNodeEl.innerHTML = nodeOptions;
 
     // 2. Populate Member drop-downs
     const memberOptions = members.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
-    document.getElementById('load-input-member').innerHTML = memberOptions;
+    const loadMemberEl = document.getElementById('load-input-member');
+    if (loadMemberEl) loadMemberEl.innerHTML = memberOptions;
 
     // 3. Populate Section Profiles drop-downs
     const sectionSel = document.getElementById('member-input-section');
@@ -1219,7 +1579,7 @@
       tbodyLoads.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-secondary);">No loads placed.</td></tr>`;
     } else {
       tbodyLoads.innerHTML = loads.map((l, index) => {
-        const target = l.type === 'NodalLoad' ? `Node ${l.nodeId}` : `Member ${l.memberId}`;
+        const target = (l.type === 'NodalLoad' || l.type === 'SupportSettlement') ? `Node ${l.nodeId}` : `Member ${l.memberId}`;
         
         const fUnit = activeUnits.loadVal;
         const dUnit = (fUnit === 'lbf' || fUnit === 'kip') ? 'ft' : 'm';
@@ -1236,16 +1596,18 @@
             const valConv = parseFloat(l.force) / factor;
             displayValStr = `${valConv.toFixed(1)} ${fUnit}`;
           }
-        } else {
-          if (l.type === 'MemberPointLoad') {
-            const factor = getForceFactor(fUnit);
-            const valConv = parseFloat(l.force) / factor;
-            displayValStr = `${valConv.toFixed(1)} ${fUnit}`;
-          } else {
-            const factor = getForceFactor(fUnit) / getDistFactor(dUnit);
-            const valConv = parseFloat(l.force) / factor;
-            displayValStr = `${valConv.toFixed(1)} ${fUnit}/${dUnit}`;
-          }
+        } else if (l.type === 'MemberPointLoad') {
+          const factor = getForceFactor(fUnit);
+          const valConv = parseFloat(l.force) / factor;
+          displayValStr = `${valConv.toFixed(1)} ${fUnit}`;
+        } else if (l.type === 'MemberDistributedLoad') {
+          const factor = getForceFactor(fUnit) / getDistFactor(dUnit);
+          const valConv = parseFloat(l.force) / factor;
+          displayValStr = `${valConv.toFixed(1)} ${fUnit}/${dUnit}`;
+        } else if (l.type === 'TemperatureLoad') {
+          displayValStr = `${l.dT} °C`;
+        } else if (l.type === 'SupportSettlement') {
+          displayValStr = `dx:${l.dx}, dy:${l.dy}, dz:${l.dz} mm`;
         }
 
         return `
